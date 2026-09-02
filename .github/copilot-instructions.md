@@ -9,8 +9,19 @@ This repository is in the frontend integration and polish phase. Do not start AP
 - Preserve the current Vite + React + TypeScript structure.
 - Preserve the route paths and `MainLayout`/`Outlet` architecture unless a change is required by a user request.
 - Keep page components under `src/pages/<PageName>/` and shared components under `src/components/<ComponentName>/`.
+- Keep shared layout code under `src/layouts/`, mock data under `src/data/`, and domain contracts under `src/types/`.
+- Do not reorganize the repository or introduce a replacement architecture during UI polish.
 - Prefer typed domain data in `src/types/` and mock data in `src/data/`.
 - Prefer existing lucide-react icons and React Router primitives over custom equivalents.
+
+## Style preservation
+
+- Keep `src/index.css` as the primary stylesheet and preserve the existing visual language, CSS variables, typography, dark dashboard palette, card treatment, spacing, and signal colors.
+- Consolidate duplicate CSS instead of adding competing global overrides.
+- Do not replace the current CSS approach with Tailwind, CSS modules, a component library, or inline styles unless explicitly requested.
+- Do not redesign the brand, route layout, navigation, colors, or typography as part of UI integration work.
+- Add responsive rules without breaking the existing desktop layout or 320px mobile support.
+- Extract repeated patterns incrementally and keep changes narrowly scoped to the current milestone.
 
 ## UI standards
 

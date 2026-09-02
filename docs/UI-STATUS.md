@@ -6,6 +6,41 @@ This document is the current frontend source of truth for the AI Stock Predictio
 
 The application currently uses Vite, React 19, TypeScript, React Router, lucide-react, and mock/static content. No market, news, authentication, database, or AI API is connected yet.
 
+## Structure and Style Contract
+
+The existing architecture and visual language are approved foundations. Future work must follow them rather than replace them.
+
+### Code structure rules
+
+- Keep the current Vite + React + TypeScript setup.
+- Keep the existing route paths and `MainLayout`/`Outlet` architecture.
+- Keep route-level screens under `src/pages/<PageName>/`.
+- Keep reusable UI under `src/components/<ComponentName>/`.
+- Keep shared layout code under `src/layouts/`.
+- Keep mock/static data under `src/data/` and shared contracts under `src/types/`.
+- Add files only when they support an existing responsibility; do not reorganize the repository into a new architecture.
+- Reuse React Router primitives, existing components, and lucide-react icons before introducing alternatives.
+- Do not change public route names or navigation destinations as part of UI polish.
+- Do not add API clients, API keys, backend packages, or authentication code during the UI phase.
+
+### Styling rules
+
+- Keep `src/index.css` as the primary shared stylesheet and preserve its existing visual direction.
+- Reuse the existing CSS variables, typography pairing, dark dashboard palette, card treatment, spacing patterns, and positive/negative signal colors.
+- Consolidate duplicate selectors when touching CSS; do not add layers of competing global overrides.
+- Prefer scoped, component-specific class names that match the existing naming style.
+- Do not replace the CSS approach with Tailwind, CSS modules, a component library, or an inline-style system unless explicitly requested.
+- Do not redesign the brand, color system, typography, layout proportions, or navigation during this integration pass.
+- Improve consistency by extracting repeated patterns, not by changing the product's visual identity.
+- Any new responsive rule must preserve the current desktop layout and remain usable at 320px wide.
+
+### Change discipline
+
+- Make the smallest change that completes the current UI milestone.
+- Preserve existing behavior unless the behavior is listed as incomplete in this document.
+- Do not rewrite working pages just to use a new pattern; migrate repeated markup incrementally.
+- Update this document when a structural or visual milestone changes.
+
 ## Current Baseline
 
 - Repository: `ai-stock-prediction`

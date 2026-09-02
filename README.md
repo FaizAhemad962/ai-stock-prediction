@@ -7,6 +7,8 @@ AI Stock Prediction is a Vite + React + TypeScript frontend for market intellige
 
 The application is currently in the UI integration and polish phase. The screens and routes are present, but the interface still uses mock/static content. API and Python backend work is intentionally deferred until the frontend workflows, shared components, states, responsive behavior, and visual consistency are complete.
 
+The current code structure and visual language are fixed foundations for this phase. UI work must preserve the existing Vite/React/TypeScript architecture, route paths, page/component folders, `MainLayout` pattern, `src/index.css` styling system, typography, colors, and overall product identity. Improvements should be incremental and compatible with the existing structure.
+
 ## Run locally
 
 ```bash
