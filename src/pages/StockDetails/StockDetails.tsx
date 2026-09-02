@@ -1,5 +1,4 @@
 import {
-  ArrowDown,
   ArrowUp,
   Bookmark,
   CalendarDays,
