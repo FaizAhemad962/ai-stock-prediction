@@ -2,7 +2,20 @@ import { Bell, ChevronDown, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { getMockStock } from "../../data/mockData";
+import { getCurrentUser, getNotifications, markNotificationRead, searchStocks, logout } from "../../services/api";
+
+type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+  created_at: string;
+};
+
+type CurrentUser = {
+  name: string;
+  email: string;
+};
 
 export function Header() {
   const navigate = useNavigate();
@@ -12,6 +25,8 @@ export function Header() {
     "exchange" | "notifications" | "profile" | null
   >(null);
   const [exchange, setExchange] = useState<"NSE" | "BSE">("NSE");
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [user, setUser] = useState<CurrentUser>({ name: "Investor", email: "" });
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,14 +40,27 @@ export function Header() {
     return () => document.removeEventListener("mousedown", closeMenu);
   }, []);
 
-  const handleSearch = () => {
+  useEffect(() => {
+    getNotifications<Notification[]>()
+      .then(setNotifications)
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    getCurrentUser<CurrentUser>()
+      .then(setUser)
+      .catch(() => undefined);
+  }, []);
+
+  const handleSearch = async () => {
     const symbol = query.trim();
 
     if (!symbol) {
       return;
     }
 
-    const stock = getMockStock(symbol);
+    const results = await searchStocks(symbol);
+    const stock = results[0];
 
     if (stock) {
       setSearchError(false);
@@ -45,7 +73,7 @@ export function Header() {
 
   const handleLogout = () => {
     setOpenMenu(null);
-    navigate("/login");
+    void logout().finally(() => navigate("/login"));
   };
 
   return (
@@ -128,7 +156,7 @@ export function Header() {
         >
           <span className="avatar small">U</span>
 
-          <span className="profile-name">Investor</span>
+          <span className="profile-name">{user.name}</span>
 
           <ChevronDown size={16} />
         </button>
@@ -137,10 +165,15 @@ export function Header() {
           <div className="header-menu notification-menu" role="status">
             <div className="header-menu-heading">
               <strong>Notifications</strong>
-              <span>2 new</span>
+              <span>{notifications.filter((item) => !item.read).length} new</span>
             </div>
-            <p>SUZLON moved up 2.31% today.</p>
-            <p>New AI insight is available for your watchlist.</p>
+            {notifications.length > 0 ? notifications.map((item) => (
+              <button key={item.id} className="notification-item" onClick={() => void markNotificationRead(item.id).then(() => setNotifications((current) => current.map((notification) => notification.id === item.id ? { ...notification, read: true } : notification)))}>
+                {item.message}
+              </button>
+            )) : (
+              <p>No new notifications.</p>
+            )}
             <button onClick={() => navigate("/settings#settings-notifications")}>
               Notification settings
             </button>
@@ -152,7 +185,7 @@ export function Header() {
             <div className="profile-menu-heading">
               <span className="avatar small">U</span>
               <div>
-                <strong>Investor</strong>
+                <strong>{user.name}</strong>
                 <span>Free workspace</span>
               </div>
             </div>

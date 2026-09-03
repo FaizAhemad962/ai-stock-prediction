@@ -11,8 +11,11 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 
-import { mockStocks } from "../../data/mockData";
+import { getInsights } from "../../services/api";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { LoadingState } from "../../components/ui/LoadingState";
 
 type Signal = {
   symbol: string;
@@ -23,96 +26,50 @@ type Signal = {
   confidence: number;
 };
 
-const signalBySymbol: Record<string, Signal["signal"]> = {
-  SUZLON: "Bullish",
-  TATASTEEL: "Bullish",
-  RELIANCE: "Positive",
-  TCS: "Neutral",
-  INFY: "Caution",
+type InsightsPageData = {
+  items: Array<{
+    symbol: string;
+    name: string;
+    price: number;
+    change_percent: number;
+    prediction: { outlook: Signal["signal"]; confidence: number };
+  }>;
+  market_score: number;
+  market_sentiment: string;
+  market_summary: string;
+  positive_signals: number;
+  positive_signals_change: string;
+  risk_alerts: number;
+  risk_alerts_change: string;
+  news_analyzed: number;
+  last_analysis: string;
+  factors: Array<{ title: string; description: string; score: number; type: string }>;
+  risks: Array<{ level: string; title: string; description: string }>;
+  news_signals: Array<{ source: string; symbol: string; title: string; sentiment: string; time: string }>;
 };
-
-const confidenceBySymbol: Record<string, number> = {
-  SUZLON: 78,
-  TATASTEEL: 74,
-  RELIANCE: 69,
-  TCS: 56,
-  INFY: 72,
-};
-
-const priceFormatter = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 2,
-});
-
-const signals: Signal[] = mockStocks.map((stock) => ({
-  symbol: stock.symbol,
-  name: stock.name,
-  price: priceFormatter.format(stock.price),
-  change: `${stock.changePercent >= 0 ? "+" : ""}${stock.changePercent.toFixed(2)}%`,
-  signal: signalBySymbol[stock.symbol] ?? "Neutral",
-  confidence: confidenceBySymbol[stock.symbol] ?? 50,
-}));
-
-const factors = [
-  {
-    title: "Technical momentum",
-    description:
-      "Price remains above the 50-day and 200-day moving averages.",
-    score: 82,
-    type: "positive",
-  },
-  {
-    title: "Market sentiment",
-    description:
-      "Recent market activity indicates improving investor sentiment.",
-    score: 74,
-    type: "positive",
-  },
-  {
-    title: "News sentiment",
-    description:
-      "Recent company and sector news is mostly positive.",
-    score: 79,
-    type: "positive",
-  },
-  {
-    title: "Volatility risk",
-    description:
-      "Recent price movement indicates moderate short-term volatility.",
-    score: 48,
-    type: "neutral",
-  },
-];
-
-const newsSignals = [
-  {
-    source: "Economic Times",
-    symbol: "SUZLON",
-    title:
-      "Renewable energy stocks gain attention as sector outlook improves",
-    sentiment: "Positive",
-    time: "32 min ago",
-  },
-  {
-    source: "Moneycontrol",
-    symbol: "SUZLON",
-    title:
-      "Institutional interest increases across renewable energy companies",
-    sentiment: "Positive",
-    time: "1 hr ago",
-  },
-  {
-    source: "Business Standard",
-    symbol: "SUZLON",
-    title:
-      "Market participants watch upcoming policy developments",
-    sentiment: "Neutral",
-    time: "2 hrs ago",
-  },
-];
 
 export function AIInsights() {
+  const [insights, setInsights] = useState<InsightsPageData | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    getInsights<InsightsPageData>()
+      .then(setInsights)
+      .catch((requestError: Error) => setError(requestError.message));
+  }, []);
+
+  if (error) return <ErrorState className="ai-insights-page" title="AI insights unavailable" description={error} />;
+  if (!insights) return <LoadingState className="ai-insights-page" label="Loading AI insights" />;
+
+  const displaySignals: Signal[] = insights.items.map((item) => ({
+    symbol: item.symbol,
+    name: item.name,
+    price: `₹${item.price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    change: `${item.change_percent >= 0 ? "+" : ""}${item.change_percent.toFixed(2)}%`,
+    signal: item.prediction.outlook,
+    confidence: item.prediction.confidence,
+  }));
+
   return (
     <div className="ai-insights-page">
       <section className="page-heading">
@@ -148,7 +105,7 @@ export function AIInsights() {
 
           <div className="market-outlook">
             <div className="outlook-score">
-              <strong>72</strong>
+              <strong>{insights.market_score}</strong>
               <span>/ 100</span>
             </div>
 
@@ -157,24 +114,22 @@ export function AIInsights() {
 
               <div className="outlook-status">
                 <ArrowUp size={13} />
-                Positive
+                {insights.market_sentiment}
               </div>
 
               <p>
-                Market momentum is currently positive, supported by
-                improving technical indicators and constructive sector
-                sentiment.
+                {insights.market_summary}
               </p>
             </div>
           </div>
 
           <div className="ai-progress">
-            <div className="ai-progress-fill" />
+            <div className="ai-progress-fill" style={{ width: `${insights.market_score}%` }} />
           </div>
 
           <div className="ai-update">
             <span>Last analysis</span>
-            <strong>2 minutes ago</strong>
+            <strong>{insights.last_analysis}</strong>
           </div>
         </div>
 
@@ -186,11 +141,11 @@ export function AIInsights() {
 
             <div>
               <span>Positive signals</span>
-              <strong>14</strong>
+              <strong>{insights.positive_signals}</strong>
             </div>
 
             <span className="mini-card-change positive">
-              +18%
+              {insights.positive_signals_change}
             </span>
           </div>
 
@@ -201,11 +156,11 @@ export function AIInsights() {
 
             <div>
               <span>Risk alerts</span>
-              <strong>3</strong>
+              <strong>{insights.risk_alerts}</strong>
             </div>
 
             <span className="mini-card-change negative">
-              -8%
+              {insights.risk_alerts_change}
             </span>
           </div>
 
@@ -216,7 +171,7 @@ export function AIInsights() {
 
             <div>
               <span>News analyzed</span>
-              <strong>128</strong>
+              <strong>{insights.news_analyzed}</strong>
             </div>
 
             <span className="mini-card-change">
@@ -240,7 +195,7 @@ export function AIInsights() {
         </div>
 
         <div className="signal-grid">
-          {signals.map((stock) => (
+          {displaySignals.map((stock) => (
             <Link
               className="ui-card signal-card signal-card-link"
               key={stock.symbol}
@@ -319,7 +274,7 @@ export function AIInsights() {
           </div>
 
           <div className="reasoning-list">
-            {factors.map((factor, index) => (
+            {insights.factors.map((factor, index) => (
               <div className="reasoning-item" key={factor.title}>
                 <div className="reasoning-number">
                   0{index + 1}
@@ -363,40 +318,16 @@ export function AIInsights() {
           </div>
 
           <div className="risk-list">
-            <div className="risk-item">
-              <span className="risk-level medium">MEDIUM</span>
+            {insights.risks.map((risk) => (
+            <div className="risk-item" key={risk.title}>
+              <span className={`risk-level ${risk.level.toLowerCase()}`}>{risk.level}</span>
 
               <div>
-                <strong>Short-term volatility</strong>
-                <p>
-                  Price movements may remain elevated around major
-                  market events.
-                </p>
+                <strong>{risk.title}</strong>
+                <p>{risk.description}</p>
               </div>
             </div>
-
-            <div className="risk-item">
-              <span className="risk-level low">LOW</span>
-
-              <div>
-                <strong>Sector concentration</strong>
-                <p>
-                  Renewable energy exposure is currently increasing.
-                </p>
-              </div>
-            </div>
-
-            <div className="risk-item">
-              <span className="risk-level medium">MEDIUM</span>
-
-              <div>
-                <strong>News sensitivity</strong>
-                <p>
-                  Company-specific announcements could affect the
-                  short-term outlook.
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -415,7 +346,7 @@ export function AIInsights() {
         </div>
 
         <div className="ai-news-grid">
-          {newsSignals.map((item) => (
+          {insights.news_signals.map((item) => (
             <article className="ui-card ai-news-card" key={item.title}>
               <div className="ai-news-top">
                 <div className="news-source-icon">

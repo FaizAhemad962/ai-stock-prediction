@@ -17,6 +17,19 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { getPreferences, updatePreferences } from "../../services/api";
+
+type Preferences = {
+  theme: "dark" | "system";
+  compact_mode: boolean;
+  notifications: boolean;
+  price_alerts: boolean;
+  news_alerts: boolean;
+  ai_alerts: boolean;
+  market_region: string;
+  timezone: string;
+  ai_frequency_minutes: number;
+};
 
 function readStoredBoolean(key: string, fallback: boolean) {
   if (typeof window === "undefined") {
@@ -66,6 +79,24 @@ export function Settings() {
   const [theme, setTheme] = useState<"dark" | "system">(readStoredTheme);
   const [actionMessage, setActionMessage] = useState("");
   const [activeSection, setActiveSection] = useState(readHashSection);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+
+  useEffect(() => {
+    getPreferences<Preferences>()
+      .then((preferences) => {
+        setNotifications(preferences.notifications);
+        setPriceAlerts(preferences.price_alerts);
+        setNewsAlerts(preferences.news_alerts);
+        setAiAlerts(preferences.ai_alerts);
+        setCompactMode(preferences.compact_mode);
+        setTheme(preferences.theme);
+        setPreferencesLoaded(true);
+      })
+      .catch(() => {
+        setPreferencesLoaded(true);
+        setActionMessage("Using local preferences while the backend is unavailable.");
+      });
+  }, []);
 
   useEffect(() => {
     const settings = {
@@ -80,7 +111,23 @@ export function Settings() {
     Object.entries(settings).forEach(([key, value]) => {
       window.localStorage.setItem(key, String(value));
     });
-  }, [aiAlerts, compactMode, newsAlerts, notifications, priceAlerts, theme]);
+
+    if (!preferencesLoaded) {
+      return;
+    }
+
+    void updatePreferences<Preferences>({
+      theme,
+      compact_mode: compactMode,
+      notifications,
+      price_alerts: priceAlerts,
+      news_alerts: newsAlerts,
+      ai_alerts: aiAlerts,
+      market_region: "India",
+      timezone: "Asia/Kolkata",
+      ai_frequency_minutes: 15,
+    }).catch(() => undefined);
+  }, [aiAlerts, compactMode, newsAlerts, notifications, preferencesLoaded, priceAlerts, theme]);
 
   useEffect(() => {
     const section = location.hash.replace("#settings-", "");

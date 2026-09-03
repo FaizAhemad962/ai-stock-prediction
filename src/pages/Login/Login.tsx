@@ -1,17 +1,27 @@
 import { ArrowRight, LockKeyhole, Mail } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { login } from "../../services/api";
+import { startGoogleAuth } from "../../services/api";
 
 export function Login() {
   const [message, setMessage] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setMessage("Authentication will be connected when the backend is ready.");
+    login<{ message: string }>(email, password)
+      .then((response) => {
+        setMessage(response.message);
+        navigate("/dashboard");
+      })
+      .catch((error: Error) => setMessage(error.message));
   };
 
   const handleGoogleLogin = () => {
-    setMessage("Google sign-in will be connected during the authentication phase.");
+    void startGoogleAuth<{ message: string }>().then((response) => setMessage(response.message));
   };
 
   return (
@@ -43,7 +53,7 @@ export function Login() {
             Email address
             <span className="auth-input">
               <Mail size={15} />
-              <input type="email" name="email" placeholder="you@example.com" required />
+              <input type="email" name="email" placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} required />
             </span>
           </label>
 
@@ -51,7 +61,7 @@ export function Login() {
             Password
             <span className="auth-input">
               <LockKeyhole size={15} />
-              <input type="password" name="password" placeholder="Enter your password" minLength={8} required />
+              <input type="password" name="password" placeholder="Enter your password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required />
             </span>
           </label>
 

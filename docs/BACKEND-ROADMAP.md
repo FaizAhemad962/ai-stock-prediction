@@ -15,8 +15,69 @@ The frontend foundation is ready for backend work:
 - Login and Register screens exist as frontend flows.
 - Watchlist, profile, notification, exchange, and stock navigation flows are defined.
 - `npm run build` and `npm run lint` pass.
+- Backend foundation is implemented under `backend/` with FastAPI app setup, restricted CORS, `/health`, schemas, mock domain routes, and tests.
 
 Before production release, complete a manual review at desktop, tablet, and 320px mobile widths.
+
+## Current Backend Status
+
+### Working
+
+- Separate `backend/` structure exists beside the frontend.
+- FastAPI application starts through Uvicorn.
+- Server configuration is defined in `backend/app/core/config.py`.
+- CORS is restricted to the configured frontend origin.
+- `GET /health` returns a typed health response.
+- Common error response schema exists.
+- `GET /api/markets/overview?exchange=NSE` works.
+- `GET /api/markets/overview?exchange=BSE` works.
+- Invalid exchanges are rejected with HTTP 422.
+- Market overview uses typed response schemas.
+- Market data is separated into route, service, and provider layers.
+- A mock market provider is available for development.
+- Backend tests currently pass: `8 passed`.
+- The frontend API client in `src/services/api.ts` now binds Markets, Dashboard news, Stock Search, Stock Details, News, Watchlist, Portfolio, Settings preferences, Login/Register, AI Insights, and Header Notifications to the mock API surface.
+- Dashboard Stock Overview and Technical Indicators now also request their data through `src/services/api.ts`.
+- The mock API-to-UI binding milestone is complete; the remaining work is hardening, persistence, real providers, and production services.
+
+### Endpoint integration audit
+
+| Backend route group | Status | UI usage |
+| --- | --- | --- |
+| Health | Working | Operational endpoint; not rendered as page data. |
+| Markets overview | Bound | Markets page. |
+| Dashboard | Bound | Dashboard market status. |
+| Stocks search | Bound | Header and Dashboard Stock Search. |
+| Stock quote/history/technicals | Bound | Stock Details, Stock Overview, and Technical Indicators. |
+| News list/stock news | Bound | News page, Dashboard, and Stock Details. |
+| News article detail | Contract ready | Current mock Read action opens the publisher URL; internal article detail can be added when the backend provides article-specific content. |
+| Watchlist | Bound | Watchlist context and Stock Details toggle. |
+| Portfolio | Bound | Portfolio holdings view. |
+| Notifications list/read | Bound | Header notification menu and read actions. |
+| User preferences | Bound | Settings preference load and update. |
+| User profile | Partially bound | Header uses `/api/auth/me`; profile edit UI is pending. |
+| Login/Register/Logout | Bound | Login, Register, and profile menu actions. |
+| Google OAuth start | Bound | Login and Register provider buttons. |
+| Google OAuth callback | Provider-driven | Called by the OAuth provider redirect, not directly by a React page. |
+| Prediction and Insights | Bound | AI Insights page and Stock Details AI contract. |
+| Session management | Contract ready | Required when real authentication and active-device UI are implemented. |
+
+This is the complete mock endpoint audit. `Contract ready` means the backend route/schema exists for a future UI workflow; it is not counted as a missing API.
+
+### Pending
+
+- Replace remaining visual-only mock sections, including chart SVG geometry, selected summary text, AI factors, and portfolio summary totals, with API response data where their backend resources are ready.
+- Replace `MockMarketProvider` with a real market-data provider.
+- Add provider API configuration, timeout, retry, rate-limit, and stale-data handling.
+- Harden stock search, Stock Details, historical, and technical provider behavior with real data.
+- Add request cancellation, retry, and mutation feedback refinement in the frontend client.
+- Harden News mapping and sentiment processing with real provider data.
+- Add authenticated Watchlist, Portfolio, Notifications, and Settings persistence.
+- Connect Login, Register, Google OAuth, sessions, and real logout.
+- Add prediction model service and evaluation.
+- Add AI explanation service after prediction data is validated.
+- Add database migrations and repositories.
+- Add production security, monitoring, and deployment configuration.
 
 ## UI-to-API Coverage Matrix
 
@@ -41,6 +102,8 @@ Every current UI workflow has an intended backend boundary. Pages must consume t
 | Login/Register | Sessions, password auth, and Google OAuth | `/api/auth/*` |
 
 This matrix is the completeness checklist for API planning. An endpoint is not complete until its schema, authentication rules, validation, error behavior, freshness requirements, and frontend loading/error states are defined.
+
+For the corresponding frontend hard-coded-value review, see [docs/UI-DATA-AUDIT.md](UI-DATA-AUDIT.md).
 
 ## Non-Negotiable Boundaries
 
@@ -95,6 +158,16 @@ The backend directory is a future addition. Do not reorganize the current fronte
 
 ### 1. FastAPI foundation
 
+Status: complete for the mock phase. FastAPI setup, restricted CORS, `/health`, typed schemas, mock domain routes, and backend tests are implemented.
+
+Verified endpoints:
+
+- `GET /health`
+- `GET /api/markets/overview?exchange=NSE`
+- `GET /api/markets/overview?exchange=BSE`
+
+The next task is to replace mock providers with configured external provider adapters while keeping the same response schemas.
+
 - Create the Python backend separately from `src/`.
 - Add health endpoint: `GET /health`.
 - Configure CORS for known frontend origins.
@@ -144,10 +217,10 @@ Requirements:
 
 ### 4. Frontend data-access integration
 
-- Add one frontend API client or service boundary after backend contracts are stable.
-- Replace mock reads one workflow at a time.
-- Preserve `LoadingState`, `EmptyState`, `ErrorState`, and not-found behavior.
-- Add request cancellation and stale-request handling where needed.
+- The frontend client is implemented in `src/services/api.ts`.
+- Main UI workflows are bound to the mock endpoints.
+- Preserve `LoadingState`, `EmptyState`, `ErrorState`, and not-found behavior while replacing providers.
+- Add request cancellation, stale-request handling, retry refinement, and mutation feedback.
 - Keep mock mode available for local UI development.
 
 Suggested order:

@@ -4,42 +4,41 @@ import {
   Gauge,
   TrendingUp,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getStockTechnicals } from "../../services/api";
+import { LoadingState } from "../ui/LoadingState";
+import { ErrorState } from "../ui/ErrorState";
 
-const indicators = [
-  {
-    label: "RSI",
-    value: "58.2",
-    status: "Neutral",
-    icon: Gauge,
-    color: "blue",
-  },
-  {
-    label: "MACD",
-    value: "+1.24",
-    status: "Positive",
-    icon: Activity,
-    color: "green",
-  },
-  {
-    label: "TREND",
-    value: "Bullish",
-    status: "Positive",
-    icon: TrendingUp,
-    color: "green",
-  },
-  {
-    label: "VOLUME",
-    value: "1.24×",
-    status: "Above average",
-    icon: BarChart3,
-    color: "purple",
-  },
-];
+type IndicatorView = {
+  label: string;
+  value: string;
+  status: string;
+  icon: typeof Gauge;
+  color: string;
+};
 
 export function TechnicalIndicators() {
+  const [data, setData] = useState<IndicatorView[]>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    getStockTechnicals("SUZLON")
+      .then((items) => setData(items.map((item) => ({
+        label: item.label.toUpperCase(),
+        value: item.value,
+        status: item.status,
+        icon: item.label.toUpperCase() === "RSI" ? Gauge : item.label.toUpperCase() === "MACD" ? Activity : item.label.toUpperCase() === "VOLUME" ? BarChart3 : TrendingUp,
+        color: item.label.toUpperCase() === "RSI" ? "blue" : item.label.toUpperCase() === "VOLUME" ? "purple" : "green",
+      }))))
+      .catch((requestError: Error) => setError(requestError.message));
+  }, []);
+
+  if (error) return <ErrorState className="technical-indicators" title="Technical indicators unavailable" description={error} />;
+  if (data.length === 0) return <LoadingState className="technical-indicators" label="Loading technical indicators" />;
+
   return (
     <section className="technical-indicators">
-      {indicators.map((indicator) => {
+      {data.map((indicator) => {
         const Icon = indicator.icon;
 
         return (

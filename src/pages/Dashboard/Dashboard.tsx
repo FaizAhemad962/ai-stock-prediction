@@ -1,19 +1,46 @@
 import { AIOutlook } from "../../components/AIOutlook/AIOutlook";
 import { NewsPanel } from "../../components/News/NewsPanel";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { mockNewsFeed } from "../../data/mockData";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { LoadingState } from "../../components/ui/LoadingState";
+import { getDashboard, getNews } from "../../services/api";
+import { useEffect, useState } from "react";
 
 import { StockChart } from "../../components/StockChart/StockChart";
 import { StockOverview } from "../../components/StockOverview/StockOverview";
 import { StockSearch } from "../../components/StockSearch/StockSearch";
 import { TechnicalIndicators } from "../../components/TechnicalIndicators/TechnicalIndicators";
 
-const dashboardNews = mockNewsFeed.slice(0, 3).map((item) => ({
-  ...item,
-  time: item.publishedAt,
-}));
-
 export function Dashboard() {
+  const [dashboardNews, setDashboardNews] = useState<Awaited<ReturnType<typeof getNews>>>([]);
+  const [newsLoading, setNewsLoading] = useState(true);
+  const [newsError, setNewsError] = useState("");
+  const [marketStatus, setMarketStatus] = useState("closed");
+
+  useEffect(() => {
+    let mounted = true;
+    getNews()
+      .then((items) => {
+        if (mounted) setDashboardNews(items.slice(0, 3));
+      })
+      .catch((error: Error) => {
+        if (mounted) setNewsError(error.message);
+      })
+      .finally(() => {
+        if (mounted) setNewsLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    getDashboard()
+      .then((overview) => setMarketStatus(overview.marketStatus))
+      .catch(() => undefined);
+  }, []);
+
   return (
     <>
       <section className="welcome-section">
@@ -30,7 +57,7 @@ export function Dashboard() {
 
         <div className="market-status">
           <span className="status-dot" />
-          <span>Markets closed</span>
+          <span>Markets {marketStatus}</span>
         </div>
       </section>
 
@@ -54,7 +81,12 @@ export function Dashboard() {
 
       <section className="dashboard-news-section">
         <SectionHeader eyebrow="NEWS INTELLIGENCE" title="Latest market news" />
-        <NewsPanel items={dashboardNews} />
+        {newsLoading ? <LoadingState label="Loading latest news" /> : null}
+        {newsError ? <ErrorState title="Latest news unavailable" description={newsError} /> : null}
+        {!newsLoading && !newsError && dashboardNews.length > 0 ? <NewsPanel items={dashboardNews} /> : null}
+        {!newsLoading && !newsError && dashboardNews.length === 0 ? (
+          <EmptyState title="No latest news" description="The backend returned no current news stories." />
+        ) : null}
       </section>
     </>
   );

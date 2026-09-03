@@ -7,16 +7,13 @@ import {
   Sparkles,
   TrendingUp,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { NewsPanel } from "../../components/News/NewsPanel";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { mockNewsFeed } from "../../data/mockData";
-
-const newsItems = mockNewsFeed.map((item) => ({
-  ...item,
-  time: item.publishedAt,
-}));
+import { ErrorState } from "../../components/ui/ErrorState";
+import { LoadingState } from "../../components/ui/LoadingState";
+import { getNews } from "../../services/api";
 
 const categories = [
   "All",
@@ -32,6 +29,36 @@ export function News() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedSentiment, setSelectedSentiment] = useState("All");
+  const [newsItems, setNewsItems] = useState<Awaited<ReturnType<typeof getNews>>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadNews = () => {
+    setIsLoading(true);
+    setError("");
+    getNews({ query: search, category: selectedCategory, sentiment: selectedSentiment })
+      .then(setNewsItems)
+      .catch((requestError: Error) => setError(requestError.message))
+      .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    getNews()
+      .then((items) => {
+        if (mounted) setNewsItems(items);
+      })
+      .catch((requestError: Error) => {
+        if (mounted) setError(requestError.message);
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filteredNews = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -59,7 +86,7 @@ export function News() {
         matchesSentiment
       );
     });
-  }, [search, selectedCategory, selectedSentiment]);
+  }, [newsItems, search, selectedCategory, selectedSentiment]);
 
   const positiveCount = newsItems.filter(
     (item) => item.sentiment === "Positive",
@@ -72,6 +99,14 @@ export function News() {
   const negativeCount = newsItems.filter(
     (item) => item.sentiment === "Negative",
   ).length;
+
+  if (isLoading) {
+    return <LoadingState className="news-page" label="Loading market news" />;
+  }
+
+  if (error) {
+    return <ErrorState className="news-page" title="News unavailable" description={error} onRetry={loadNews} />;
+  }
 
   return (
     <div className="news-page">

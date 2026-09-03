@@ -9,6 +9,7 @@ import {
 import { NavLink } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { logout } from "../../services/api";
 
 const navigation = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
@@ -88,7 +89,7 @@ export function Sidebar() {
         {profileOpen ? (
           <div className="sidebar-profile-menu">
             <NavLink to="/settings#settings-account">Account settings</NavLink>
-            <button onClick={() => navigate("/login")}>Log out</button>
+            <button onClick={() => void logout().finally(() => navigate("/login"))}>Log out</button>
           </div>
         ) : null}
       </div>

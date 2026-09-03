@@ -1,17 +1,28 @@
 import { ArrowRight, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { register } from "../../services/api";
+import { startGoogleAuth } from "../../services/api";
 
 export function Register() {
   const [message, setMessage] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setMessage("Account creation will be connected when the backend is ready.");
+    register<{ message: string }>(name, email, password)
+      .then((response) => {
+        setMessage(response.message);
+        navigate("/dashboard");
+      })
+      .catch((error: Error) => setMessage(error.message));
   };
 
   const handleGoogleSignup = () => {
-    setMessage("Google sign-up will be connected during the authentication phase.");
+    void startGoogleAuth<{ message: string }>().then((response) => setMessage(response.message));
   };
 
   return (
@@ -43,7 +54,7 @@ export function Register() {
             Full name
             <span className="auth-input">
               <UserRound size={15} />
-              <input type="text" name="name" placeholder="Your name" required />
+              <input type="text" name="name" placeholder="Your name" value={name} onChange={(event) => setName(event.target.value)} required />
             </span>
           </label>
 
@@ -51,7 +62,7 @@ export function Register() {
             Email address
             <span className="auth-input">
               <Mail size={15} />
-              <input type="email" name="email" placeholder="you@example.com" required />
+              <input type="email" name="email" placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} required />
             </span>
           </label>
 
@@ -59,7 +70,7 @@ export function Register() {
             Password
             <span className="auth-input">
               <LockKeyhole size={15} />
-              <input type="password" name="password" placeholder="At least 8 characters" minLength={8} required />
+              <input type="password" name="password" placeholder="At least 8 characters" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required />
             </span>
           </label>
 

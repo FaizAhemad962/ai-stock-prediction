@@ -4,6 +4,8 @@
 
 The frontend UI foundation is complete and the project is entering the backend integration phase. Follow `docs/UI-STATUS.md` and `docs/BACKEND-ROADMAP.md`; preserve the existing UI structure and contracts while adding Python/FastAPI services.
 
+Backend status: FastAPI foundation and a complete typed mock API surface are working. The frontend API client binds the main UI workflows. Continue in the documented order: replace visual-only mock sections, real provider adapters, persistent user/authentication features, prediction, then AI explanations.
+
 Settings is only partially complete. Preserve its current layout and local preference controls, then connect account, security, authenticated preferences, and real logout through backend contracts rather than inventing frontend-only identity behavior.
 
 ## Architecture

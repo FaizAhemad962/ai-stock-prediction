@@ -7,7 +7,11 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { getMockStock, mockPortfolio } from "../../data/mockData";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { LoadingState } from "../../components/ui/LoadingState";
+import { getPortfolio } from "../../services/api";
 
 type Holding = {
   symbol: string;
@@ -26,7 +30,7 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 2,
 });
 
-const holdings: Holding[] = mockPortfolio.flatMap((holding) => {
+const mockHoldings: Holding[] = mockPortfolio.flatMap((holding) => {
   const stock = getMockStock(holding.symbol);
 
   if (!stock) {
@@ -78,6 +82,35 @@ const allocation = [
 ];
 
 export function Portfolio() {
+  const [portfolioHoldings, setPortfolioHoldings] = useState<Holding[]>(mockHoldings);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    getPortfolio()
+      .then((data) => {
+        if (!mounted) return;
+        setPortfolioHoldings(data.holdings.flatMap((holding) => {
+          const stock = getMockStock(holding.symbol);
+          if (!stock) return [];
+          const pnl = (holding.currentPrice - holding.averagePrice) * holding.quantity;
+          const base = holding.averagePrice * holding.quantity;
+          return [{ symbol: stock.symbol, name: stock.name, quantity: holding.quantity, averagePrice: currencyFormatter.format(holding.averagePrice), currentPrice: currencyFormatter.format(holding.currentPrice), pnl: `${pnl >= 0 ? "+" : ""}${currencyFormatter.format(pnl)}`, pnlPercentage: `${pnl >= 0 ? "+" : ""}${((pnl / base) * 100).toFixed(2)}%`, positive: pnl >= 0 }];
+        }));
+      })
+      .catch((requestError: Error) => {
+        if (mounted) setError(requestError.message);
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  if (isLoading) return <LoadingState className="portfolio-page" label="Loading portfolio" />;
+  if (error) return <ErrorState className="portfolio-page" title="Portfolio unavailable" description={error} />;
+
   return (
     <div className="portfolio-page">
       <section className="page-heading">
@@ -255,7 +288,7 @@ export function Portfolio() {
           </div>
 
           <span className="holding-count">
-            {holdings.length} stocks
+            {portfolioHoldings.length} stocks
           </span>
         </div>
 
@@ -269,7 +302,7 @@ export function Portfolio() {
           </div>
 
           <div className="holdings-list">
-            {holdings.map((holding) => (
+            {portfolioHoldings.map((holding) => (
               <div className="holding-row" key={holding.symbol}>
                 <Link
                   className="holding-stock stock-link"

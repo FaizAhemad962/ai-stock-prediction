@@ -10,17 +10,57 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 import { EmptyState } from "../../components/ui/EmptyState";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { LoadingState } from "../../components/ui/LoadingState";
 import { useWatchlist } from "../../components/WatchlistContext/useWatchlist";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { StatCard } from "../../components/ui/StatCard";
-import { getMockStock, mockStockDetail } from "../../data/mockData";
+import { getStock, getStockHistory, getStockNews, getStockTechnicals } from "../../services/api";
+import { mockStockDetail } from "../../data/mockData";
+import type { Stock } from "../../types/stock";
 
 export function StockDetails() {
   const { symbol = "SUZLON" } = useParams();
-  const stock = getMockStock(symbol);
+  const [stock, setStock] = useState<Stock | null>(null);
+  const [technicals, setTechnicals] = useState(mockStockDetail.technicals);
+  const [news, setNews] = useState(mockStockDetail.news);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
   const { isWatched, toggleWatchlist } = useWatchlist();
+
+  useEffect(() => {
+    let mounted = true;
+
+    Promise.all([getStock(symbol), getStockHistory(symbol), getStockTechnicals(symbol), getStockNews(symbol)])
+      .then(([stockData, history, technicalData, newsData]) => {
+        if (!mounted) return;
+        setStock(stockData);
+        setTechnicals(technicalData.map((item) => ({ name: item.label, value: item.value, signal: item.signal, type: item.signal === "Neutral" ? "neutral" as const : "positive" as const })));
+        setNews(newsData.map((item) => ({ source: item.source, time: item.publishedAt, title: item.title, sentiment: item.sentiment })));
+        void history;
+      })
+      .catch((requestError: Error) => {
+        if (mounted) setError(requestError.message);
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [symbol]);
+
+  if (isLoading) {
+    return <LoadingState className="stock-details-page" label="Loading stock details" />;
+  }
+
+  if (error) {
+    return <ErrorState className="stock-details-page" title="Stock details unavailable" description={error} />;
+  }
 
   if (!stock) {
     return (
@@ -37,7 +77,7 @@ export function StockDetails() {
   const price = `₹${stock.price.toFixed(2)}`;
   const change = `${isPositive ? "+" : "-"}₹${Math.abs(stock.change).toFixed(2)}`;
   const percentage = `${isPositive ? "+" : "-"}${Math.abs(stock.changePercent).toFixed(2)}%`;
-  const { stats, technicals, news } = mockStockDetail;
+  const { stats } = mockStockDetail;
 
   return (
     <div className="stock-details-page">

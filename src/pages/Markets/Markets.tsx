@@ -6,16 +6,79 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import {
-  mockMarketGainers,
-  mockMarketIndices,
-  mockMarketLosers,
-  mockSectors,
-} from "../../data/mockData";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { LoadingState } from "../../components/ui/LoadingState";
+import { getMarketOverview, type MarketOverview } from "../../services/api";
 
 export function Markets() {
+  const [overview, setOverview] = useState<MarketOverview | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadOverview = () => {
+    setIsLoading(true);
+    setError("");
+
+    getMarketOverview()
+      .then(setOverview)
+      .catch((requestError: Error) => setError(requestError.message))
+      .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    getMarketOverview()
+      .then((data) => {
+        if (mounted) {
+          setOverview(data);
+        }
+      })
+      .catch((requestError: Error) => {
+        if (mounted) {
+          setError(requestError.message);
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (isLoading) {
+    return <LoadingState className="markets-page" label="Loading market overview" />;
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        className="markets-page"
+        title="Market overview unavailable"
+        description={error}
+        onRetry={loadOverview}
+      />
+    );
+  }
+
+  if (!overview) {
+    return (
+      <EmptyState
+        className="markets-page"
+        title="No market data"
+        description="The backend returned no market overview data."
+      />
+    );
+  }
+
   return (
     <div className="markets-page">
       <section className="page-heading">
@@ -31,12 +94,12 @@ export function Markets() {
 
         <div className="market-status">
           <span className="status-dot" />
-          <span>Markets closed</span>
+          <span>Markets {overview.marketStatus}</span>
         </div>
       </section>
 
       <section className="market-indices">
-        {mockMarketIndices.map((index) => (
+        {overview.indices.map((index) => (
           <div className="ui-card index-card" key={index.name}>
             <div className="index-card-header">
               <span>{index.name}</span>
@@ -64,14 +127,14 @@ export function Markets() {
         <MarketStockList
           title="Top Gainers"
           icon={<TrendingUp size={15} />}
-          stocks={mockMarketGainers}
+          stocks={overview.gainers}
           positive
         />
 
         <MarketStockList
           title="Top Losers"
           icon={<ArrowDown size={15} />}
-          stocks={mockMarketLosers}
+          stocks={overview.losers}
           positive={false}
         />
       </section>
@@ -80,7 +143,7 @@ export function Markets() {
         <SectionHeader eyebrow="SECTOR ANALYSIS" title="Sector performance" />
 
         <div className="sector-grid">
-          {mockSectors.map((sector) => (
+          {overview.sectors.map((sector) => (
             <div className="ui-card sector-card" key={sector.name}>
               <div className="sector-icon">
                 <Activity size={15} />

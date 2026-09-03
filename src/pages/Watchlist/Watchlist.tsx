@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import { useWatchlist } from "../../components/WatchlistContext/useWatchlist";
 import { mockStocks } from "../../data/mockData";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { LoadingState } from "../../components/ui/LoadingState";
 
 type Stock = {
   symbol: string;
@@ -46,7 +47,7 @@ const initialStocks: Stock[] = mockStocks.map((stock) => ({
 }));
 
 export function Watchlist() {
-  const { symbols, toggleWatchlist } = useWatchlist();
+  const { symbols, isLoading, toggleWatchlist } = useWatchlist();
   const [search, setSearch] = useState("");
   const stocks = initialStocks.filter((stock) => symbols.includes(stock.symbol));
 
@@ -63,6 +64,10 @@ export function Watchlist() {
         stock.name.toLowerCase().includes(query),
     );
   }, [search, stocks]);
+
+  if (isLoading) {
+    return <LoadingState className="watchlist-page" label="Loading watchlist" />;
+  }
 
   const addStock = () => {
     const nextStock = initialStocks.find((stock) => !symbols.includes(stock.symbol));

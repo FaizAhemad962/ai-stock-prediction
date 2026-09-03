@@ -1,9 +1,45 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getStockHistory } from "../../services/api";
+import { ErrorState } from "../ui/ErrorState";
+import { LoadingState } from "../ui/LoadingState";
+import type { PricePoint } from "../../types/stock";
 
 const ranges = ["1D", "1W", "1M", "6M", "1Y", "5Y"];
 
 export function StockChart() {
   const [selectedRange, setSelectedRange] = useState("1M");
+  const [points, setPoints] = useState<PricePoint[]>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    getStockHistory("SUZLON", selectedRange)
+      .then((history) => {
+        if (mounted) {
+          setPoints(history);
+          setError("");
+        }
+      })
+      .catch((requestError: Error) => {
+        if (mounted) setError(requestError.message);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedRange]);
+
+  const chartPath = points.length > 1
+    ? points.map((point, index) => {
+        const minPrice = Math.min(...points.map((item) => item.price));
+        const maxPrice = Math.max(...points.map((item) => item.price));
+        const x = (index / (points.length - 1)) * 800;
+        const y = 250 - ((point.price - minPrice) / Math.max(maxPrice - minPrice, 0.01)) * 200;
+        return `${index === 0 ? "M" : "L"}${x} ${y}`;
+      }).join(" ")
+    : "";
+  const areaPath = chartPath ? `${chartPath} L800 300 L0 300 Z` : "";
 
   return (
     <section className="ui-card chart-card">
@@ -30,7 +66,10 @@ export function StockChart() {
         </div>
       </div>
 
-      <div className="chart-area">
+      {error ? <ErrorState title="Price history unavailable" description={error} /> : null}
+      {!error && points.length === 0 ? <LoadingState label="Loading price history" /> : null}
+
+      <div className="chart-area" aria-label="SUZLON price history chart">
         <div className="chart-grid-line line-one" />
         <div className="chart-grid-line line-two" />
         <div className="chart-grid-line line-three" />
@@ -62,17 +101,8 @@ export function StockChart() {
             </linearGradient>
           </defs>
 
-          <path
-            d="M0 230 C60 210 90 220 140 180 S220 205 270 150 S340 170 390 120 S450 145 500 105 S570 130 620 80 S700 105 800 45 L800 300 L0 300 Z"
-            fill="url(#chartFill)"
-          />
-
-          <path
-            d="M0 230 C60 210 90 220 140 180 S220 205 270 150 S340 170 390 120 S450 145 500 105 S570 130 620 80 S700 105 800 45"
-            fill="none"
-            stroke="#35d399"
-            strokeWidth="3"
-          />
+          {areaPath ? <path d={areaPath} fill="url(#chartFill)" /> : null}
+          {chartPath ? <path d={chartPath} fill="none" stroke="#35d399" strokeWidth="3" /> : null}
         </svg>
       </div>
 

@@ -2,11 +2,13 @@
 
 ## Purpose
 
-This document is the current frontend source of truth for the AI Stock Prediction application. It records what is implemented, what is incomplete, and what must be finished before Python/FastAPI and external API work begins.
+This document is the current frontend source of truth for the AI Stock Prediction application. It records what is implemented, what remains as UI polish, and how the frontend is currently bound to the mock FastAPI contracts.
 
 The complete backend endpoint inventory and AI sequence are maintained in [docs/BACKEND-ROADMAP.md](BACKEND-ROADMAP.md). Use both documents together: this file describes UI behavior and the backend document describes the services required to power it.
 
-The application currently uses Vite, React 19, TypeScript, React Router, lucide-react, and mock/static content. No market, news, authentication, database, or AI API is connected yet.
+The detailed hard-coded data and API binding audit is maintained in [docs/UI-DATA-AUDIT.md](UI-DATA-AUDIT.md). Use it before marking a UI surface fully API-backed.
+
+The application uses Vite, React 19, TypeScript, React Router, lucide-react, and a typed frontend API client. The UI is connected to mock FastAPI endpoints; real provider data, database persistence, and production authentication are still pending.
 
 ### Data boundary
 
@@ -27,7 +29,8 @@ The existing architecture and visual language are approved foundations. Future w
 - Add files only when they support an existing responsibility; do not reorganize the repository into a new architecture.
 - Reuse React Router primitives, existing components, and lucide-react icons before introducing alternatives.
 - Do not change public route names or navigation destinations as part of UI polish.
-- Do not add API clients, API keys, backend packages, or authentication code during the UI phase.
+- Keep API access in `src/services/api.ts`; pages must not call external providers directly.
+- Keep real provider keys, OpenAI keys, OAuth secrets, database credentials, and JWT secrets server-side.
 
 ### Styling rules
 
@@ -57,6 +60,9 @@ The existing architecture and visual language are approved foundations. Future w
 - Styling: primarily `src/index.css`
 - Data layer: typed mock records are available in `src/data/mockData.ts`
 - Domain types: stock, chart, indicator, news, portfolio, and prediction contracts are available in `src/types/stock.ts`
+- Backend status: FastAPI foundation and complete mock API surface are working; frontend API client bindings cover the main data-bearing workflows and real provider integration is pending.
+- API audit: all core UI data and actions use `src/services/api.ts`; OAuth callback, health, article-detail, profile-edit, and session-management routes are correctly classified as operational or future contract workflows.
+- Data audit: main requests are API-backed, but Dashboard summaries, Stock Details analysis/statistics, News summary widgets, Watchlist signals, and some chart labels still contain mock or hard-coded domain values. See [docs/UI-DATA-AUDIT.md](UI-DATA-AUDIT.md).
 - Automated tests: no test script currently exists
 
 ### Validation status
@@ -66,7 +72,7 @@ The existing architecture and visual language are approved foundations. Future w
 | `npm run build` | Passing | Confirmed on 2026-09-03. |
 | `npm run lint` | Passing | Confirmed on 2026-09-03. |
 | Routes | Implemented | Includes dashboard routes, `/stock/:symbol`, `/login`, `/register`, and fallback redirects. |
-| API integration | Ready to begin | Follow [docs/BACKEND-ROADMAP.md](BACKEND-ROADMAP.md) and build behind the existing UI contracts; no key belongs in frontend code or committed files. |
+| API integration | Mock integration complete | Main UI data surfaces use `src/services/api.ts` and the mock FastAPI endpoints; real provider integration is pending. |
 
 ## What Is Good
 
@@ -135,8 +141,15 @@ The existing architecture and visual language are approved foundations. Future w
 - Header Profile and the sidebar profile now open account menus with Account settings and Log out actions; the Sidebar no longer duplicates Settings as a separate navigation item.
 - Header exchange indicator now opens an NSE/BSE selector with the selected exchange visible.
 - Login and Register routes now provide email/password and Google provider entry points for the frontend flow.
+- AI Insights now receives its metrics, stock display values, factors, risks, news signals, and analysis copy from the expanded `/api/insights` mock response.
 
 ## What Is Missing or Incomplete
+
+### Backend handoff status
+
+Working: FastAPI app, CORS, `/health`, typed schemas, mock APIs for Markets, Dashboard, Stocks, News, Watchlist, Portfolio, Notifications, Settings, Authentication, Predictions, and Insights, plus backend tests. The frontend API client binds Markets, Dashboard news/featured stock/technicals, Stock Search, Stock Details, News, Watchlist, Portfolio, Settings preferences, Login/Register, AI Insights, and Header Notifications to those endpoints.
+
+Pending: real provider adapters, persistent database-backed user state, production authentication/OAuth, request cancellation and retry refinement, chart data visualization from returned history, complete per-symbol detail data, profile-edit and session-management UI, and production prediction/AI services. See [docs/BACKEND-ROADMAP.md](BACKEND-ROADMAP.md) for the complete endpoint inventory and integration audit.
 
 ### Priority 1: shared UI primitives
 
@@ -192,13 +205,13 @@ The states should be reusable components, not one-off paragraphs embedded in eac
 
 Present: welcome area, market status, search, stock overview, chart shell, AI outlook, technical overview, and compact latest-news panel.
 
-Remaining: chart tooltip, volume visualization, working timeframe controls, stock statistics, market summary, and loading/empty/error states.
+Remaining: chart rendering from returned history, volume visualization, working timeframe controls, and richer dashboard summary data.
 
 #### Markets
 
 Present: indices, top gainers, top losers, sector performance, and mock stock data.
 
-Remaining: loading/empty/error states and a defined most-active list if it remains in the milestone.
+Remaining: stale-data presentation, real-provider freshness behavior, and a defined most-active list if it remains in the milestone.
 
 #### Stock Details
 
@@ -210,25 +223,25 @@ Remaining: responsive chart/table behavior and broader per-symbol detail records
 
 Present: page layout, mock rows, filtering, and filtered empty feedback.
 
-Remaining: persistence across page reloads, stock catalog search for adding arbitrary symbols, and loading/error placeholders for the future API.
+Remaining: backend mutation error feedback, stock catalog search for adding arbitrary symbols, and production user ownership/authentication.
 
 #### Portfolio
 
 Present: portfolio summary, holdings, allocation, and mock presentation.
 
-Remaining: functional portfolio actions, clear zero-holdings state, responsive table behavior, and data contracts for quantity, average price, current price, and P&L.
+Remaining: functional portfolio mutation actions, clear zero-holdings state, responsive table behavior, and database-backed user ownership.
 
 #### AI Insights
 
 Present: AI-oriented visual sections and mock analysis content.
 
-Remaining: explicit mock/unavailable labeling, loading/error states, and a typed prediction/explanation contract before connecting an AI service.
+Remaining: production prediction/AI provider behavior, request freshness/retry handling, and stronger uncertainty presentation. The current page is fully bound to the mock Insights contract.
 
 #### News
 
 Present: News page, cards, filtering, and an empty result message.
 
-Remaining: connect article-specific URLs and add loading/error states when the News API is introduced. The current `Read` action opens the mock publisher destination, and related-stock navigation is working. News and Watchlist now use the shared empty-state component. News-to-stock mapping and sentiment remain backend/data work.
+Remaining: article-specific URLs from provider data and richer pagination. The current `Read` action opens mock publisher destinations, related-stock navigation works, and News requests data through the API client. News mapping and sentiment are mock backend behavior for now.
 
 #### Settings
 
@@ -269,23 +282,22 @@ The Settings category navigation and local notification, compact-mode, and theme
 
 ## Recommended Implementation Order
 
-1. Migrate existing page markup to the shared UI primitives.
-2. Move remaining page-specific prediction, chart, and settings records onto the centralized typed data source where applicable.
-3. Finish remaining stock actions and optional watchlist persistence.
-4. Extract reusable News card/panel components and complete News links.
-5. Define page-level loading, empty, error, and disabled states using the shared primitives.
-6. Consolidate remaining duplicate CSS and complete hover, responsive, and accessibility polish, including the six-item mobile navigation and Profile -> Settings flow.
-7. Run a manual route and viewport review, then add focused tests for routing, stock resolution, filtering, and state rendering.
-8. Only after this checklist is complete, begin the Python/FastAPI and API data-flow phase.
+1. Finish remaining visual-only mock sections using ready API response data.
+2. Add request cancellation, retry refinement, and mutation error feedback.
+3. Replace mock market and news providers with real provider adapters.
+4. Add database-backed user state, authentication, OAuth, and server-side logout.
+5. Add production prediction evaluation and AI explanation safeguards.
+6. Complete manual route and viewport review plus focused frontend/API tests.
+7. Complete security, observability, deployment, and provider contract testing.
 
-## UI Definition of Done Before APIs
+## UI and Mock API Integration Definition of Done
 
 - All routes load without console errors.
 - `npm run build` and `npm run lint` pass.
 - Every visible navigation or action either works or is intentionally disabled with a clear reason.
 - Every stock reference can reach Stock Details.
 - Stock Details changes with the route symbol and handles unknown symbols.
-- Empty and not-found states are defined for the current synchronous surfaces; loading and request-error states must be integrated at the future data-access boundary.
+- Empty, loading, error, and not-found states are defined for the current mock API request surfaces.
 - Mobile users can reach every route and use every primary workflow.
 - Keyboard focus and semantic controls are implemented for interactive elements.
 - Shared primitives are used across pages instead of duplicating visual markup.
@@ -293,9 +305,9 @@ The Settings category navigation and local notification, compact-mode, and theme
 - No stock price, company record, news record, or prediction should be hard-coded directly inside a page or reusable component.
 - Settings UI and authentication actions must remain separate: visible controls may be implemented in the frontend, but identity, sessions, permissions, and account data must be enforced by the backend.
 
-## Backend Handoff Boundary
+## Real Provider Handoff Boundary
 
-Do not add API keys or API packages during this UI phase. Once the UI definition of done is met, the planned flow is:
+The mock API-to-UI binding is complete. Real provider keys and external integrations must remain server-side. The planned flow is:
 
 ```text
 Market API + Historical Data + News + Company Data

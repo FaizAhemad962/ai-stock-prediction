@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 export type NewsCardItem = {
   id: string;
   source: string;
-  time: string;
+  publishedAt: string;
   title: string;
   summary: string;
   sentiment: "Positive" | "Neutral" | "Negative";
@@ -40,7 +40,7 @@ export function NewsCard({ item }: NewsCardProps) {
             <strong>{item.source}</strong>
             <span>
               <Clock3 size={9} />
-              {item.time}
+              {item.publishedAt}
             </span>
           </div>
         </div>

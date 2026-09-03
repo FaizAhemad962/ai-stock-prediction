@@ -1,40 +1,40 @@
 import { Search, X } from "lucide-react";
 import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
-const stocks = [
-  {
-    symbol: "SUZLON",
-    name: "Suzlon Energy",
-    exchange: "NSE",
-    price: "₹52.40",
-  },
-  {
-    symbol: "RELIANCE",
-    name: "Reliance Industries",
-    exchange: "NSE",
-    price: "₹1,420.25",
-  },
-  {
-    symbol: "TATAMOTORS",
-    name: "Tata Motors",
-    exchange: "NSE",
-    price: "₹742.80",
-  },
-];
+import { searchStocks } from "../../services/api";
+import type { Stock } from "../../types/stock";
 
 export function StockSearch() {
   const [query, setQuery] = useState("");
+  const [stocks, setStocks] = useState<Stock[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(false);
   const navigate = useNavigate();
 
-  const filteredStocks = stocks.filter((stock) => {
-    const searchTerm = query.toLowerCase();
+  useEffect(() => {
+    const searchTerm = query.trim();
 
-    return (
-      stock.name.toLowerCase().includes(searchTerm) ||
-      stock.symbol.toLowerCase().includes(searchTerm)
-    );
-  });
+    if (!searchTerm) {
+      return;
+    }
+
+    let mounted = true;
+    searchStocks(searchTerm)
+      .then((results) => {
+        if (mounted) setStocks(results);
+      })
+      .catch(() => {
+        if (mounted) setError(true);
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [query]);
 
   const handleStockSelect = (symbol: string) => {
     setQuery("");
@@ -49,7 +49,11 @@ export function StockSearch() {
         <input
           type="text"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setIsLoading(Boolean(event.target.value.trim()));
+            setError(false);
+          }}
           placeholder="Search for a stock, company or symbol..."
           aria-label="Search stocks"
         />
@@ -67,8 +71,12 @@ export function StockSearch() {
 
       {query && (
         <div className="search-results">
-          {filteredStocks.length > 0 ? (
-            filteredStocks.map((stock) => (
+          {isLoading ? (
+            <div className="search-no-results"><span>Searching stocks...</span></div>
+          ) : error ? (
+            <div className="search-no-results"><span>Stock search is unavailable.</span></div>
+          ) : stocks.length > 0 ? (
+            stocks.map((stock) => (
               <button
                 key={stock.symbol}
                 className="search-result"
@@ -82,12 +90,12 @@ export function StockSearch() {
                   <strong>{stock.name}</strong>
 
                   <span>
-                    {stock.symbol} · {stock.exchange}
+                    {stock.symbol} · {stock.market}
                   </span>
                 </div>
 
                 <span className="result-price">
-                  {stock.price}
+                  ₹{stock.price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </button>
             ))
