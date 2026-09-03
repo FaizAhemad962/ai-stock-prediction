@@ -4,7 +4,13 @@
 
 This document is the current frontend source of truth for the AI Stock Prediction application. It records what is implemented, what is incomplete, and what must be finished before Python/FastAPI and external API work begins.
 
+The complete backend endpoint inventory and AI sequence are maintained in [docs/BACKEND-ROADMAP.md](BACKEND-ROADMAP.md). Use both documents together: this file describes UI behavior and the backend document describes the services required to power it.
+
 The application currently uses Vite, React 19, TypeScript, React Router, lucide-react, and mock/static content. No market, news, authentication, database, or AI API is connected yet.
+
+### Data boundary
+
+The current stock values are temporary mock data for UI development. They are centralized in `src/data/mockData.ts` and described by contracts in `src/types/stock.ts`; pages and components must consume those records rather than hard-coding stock values locally. When the Python backend is introduced, its responses should satisfy the same typed contracts so the UI does not need to be rewritten around a provider-specific format.
 
 ## Structure and Style Contract
 
@@ -49,18 +55,18 @@ The existing architecture and visual language are approved foundations. Future w
 - Routes: implemented in `src/App.tsx`
 - Shared shell: `src/layouts/MainLayout/MainLayout.tsx`
 - Styling: primarily `src/index.css`
-- Data layer: `src/data/mockData.ts` exists but is empty
-- Domain types: `src/types/stock.ts` exists but is empty
+- Data layer: typed mock records are available in `src/data/mockData.ts`
+- Domain types: stock, chart, indicator, news, portfolio, and prediction contracts are available in `src/types/stock.ts`
 - Automated tests: no test script currently exists
 
 ### Validation status
 
 | Check | Status | Notes |
 | --- | --- | --- |
-| `npm run build` | Blocked | Unused `ArrowDown` imports in `src/pages/AIInsights/AIInsights.tsx` and `src/pages/StockDetails/StockDetails.tsx` fail TypeScript build. |
-| `npm run lint` | Blocked | The same two unused imports fail ESLint. |
-| Routes | Implemented | Includes fallback redirects and `/stock/:symbol`. |
-| API integration | Not started | Correctly deferred until UI integration and polish are complete. |
+| `npm run build` | Passing | Confirmed on 2026-09-03. |
+| `npm run lint` | Passing | Confirmed on 2026-09-03. |
+| Routes | Implemented | Includes dashboard routes, `/stock/:symbol`, `/login`, `/register`, and fallback redirects. |
+| API integration | Ready to begin | Follow [docs/BACKEND-ROADMAP.md](BACKEND-ROADMAP.md) and build behind the existing UI contracts; no key belongs in frontend code or committed files. |
 
 ## What Is Good
 
@@ -78,6 +84,8 @@ The existing architecture and visual language are approved foundations. Future w
   - `/ai-insights`
   - `/news`
   - `/settings`
+     - `/login`
+     - `/register`
 - Unknown routes redirect to `/dashboard`.
 
 ### Shared visual foundation
@@ -96,19 +104,43 @@ The existing architecture and visual language are approved foundations. Future w
 - Stock search filters mock results and navigates to stock details.
 - The root route redirects to Dashboard.
 - Dashboard already composes Stock Search, Stock Overview, Stock Chart, AI Outlook, Technical Indicators, and News.
+- Typed mock contracts now cover stocks, price history, indicators, news, portfolio holdings, and predictions.
+- Mock values are centralized in `src/data/mockData.ts`; UI components should not define duplicate stock records or provider-specific data shapes.
+- Shared UI primitives now exist under `src/components/ui/` for cards, badges, section headers, stock rows, and common states.
+- Stock Details now resolves `:symbol` and displays a not-found state for unsupported symbols.
+- Watchlist, Portfolio, News, and AI Insights stock references now use semantic links to Stock Details.
+- Watchlist state is shared across routes for the current session, with functional add, remove, and Stock Details toggle actions.
+- Watchlist distinguishes an empty list from a search with no matching results.
+- Mobile bottom navigation exposes Dashboard, Markets, Watchlist, Portfolio, AI Insights, and News; Settings is intentionally accessed through the Profile menu to avoid duplicate navigation.
+- Stock Details now uses shared `StatCard` and `SectionHeader` primitives for statistics and news sections.
+- Markets now uses `SectionHeader` and semantic keyboard-accessible links for stock rows.
+- News article markup is now extracted into reusable `NewsCard` and `NewsPanel` components.
+- Dashboard now uses a compact `NewsPanel` for latest stories instead of nesting the full News page.
+- Header search now navigates supported symbols to Stock Details and reports unknown symbols.
+- Header search now resolves exact company names through the centralized stock catalog.
+- Watchlist and AI Insights now consume centralized `mockStocks` records instead of defining duplicate stock names and prices.
+- Markets now consumes centralized typed records for indices, gainers, losers, and sectors.
+- Portfolio now consumes typed holdings and calculates display P&L from numeric values.
+- Stock Details now consumes centralized typed statistics, technical indicators, and related news records.
+- News now consumes the centralized typed news feed for filtering and article rendering.
+- Settings notification, compact-mode, and theme controls now have local session behavior with accessible pressed states.
+- Settings notification, compact-mode, and theme preferences now persist across page reloads in browser storage.
+- Settings remains partially complete: local preference behavior is implemented, while account, security, profile, market region, timezone, AI frequency, and real system-theme behavior remain unfinished.
+- Shared loading, empty, and error primitives now have consistent styling, retry presentation, and keyboard focus treatment.
+- A global `AppErrorBoundary` now provides a retryable render-error surface around the routed application.
+- News and Watchlist now use the shared `EmptyState` primitive for filtered and empty-list results.
+- Backend-dependent Settings actions now provide accessible deferred-action feedback instead of behaving like inactive buttons.
+- Settings category navigation now scrolls to visible Account, Notifications, Appearance, Privacy & Security, and Data & AI sections with active-state feedback.
+- Header Notifications now opens an in-place notification menu with mock alerts and a link to notification settings.
+- Header Profile and the sidebar profile now open account menus with Account settings and Log out actions; the Sidebar no longer duplicates Settings as a separate navigation item.
+- Header exchange indicator now opens an NSE/BSE selector with the selected exchange visible.
+- Login and Register routes now provide email/password and Google provider entry points for the frontend flow.
 
 ## What Is Missing or Incomplete
 
-### Priority 0: restore the quality gate
-
-- Remove the unused `ArrowDown` imports from:
-  - `src/pages/AIInsights/AIInsights.tsx`
-  - `src/pages/StockDetails/StockDetails.tsx`
-- Re-run `npm run build` and `npm run lint` until both pass.
-
 ### Priority 1: shared UI primitives
 
-The requested reusable component layer does not yet exist. Add these under a consistent location such as `src/components/ui/`:
+The shared component layer is now started under `src/components/ui/`:
 
 - `Card`
 - `StatCard`
@@ -119,24 +151,28 @@ The requested reusable component layer does not yet exist. Add these under a con
 - `EmptyState`
 - `ErrorState`
 
-Use these primitives to remove repeated `.ui-card`, heading, status, and row markup from pages. Keep the public props small and typed. Do not introduce a new state-management library for this pass.
+The first migrations are complete in Stock Details and Markets. Continue migrating repeated page markup incrementally. The state primitives are styled and ready for page adoption; real loading/error lifecycle handling belongs at the future data-access boundary.
 
 ### Priority 1: route-driven stock details
 
-`/stock/:symbol` exists, but Stock Details currently renders Suzlon-specific content regardless of the URL. It must read `useParams()` and resolve the symbol from typed mock data. Unknown symbols need an explicit not-found state with a route back to Markets.
+`/stock/:symbol` now reads `useParams()` and resolves supported symbols from typed mock data. Unknown symbols show an explicit not-found state with a route back to Markets. Supporting data for all symbols used by Markets and other pages is still needed.
 
 ### Priority 1: cross-page navigation
 
 Complete the visual product flow:
 
-- Markets stock row -> Stock Details: partially working, but rows should be semantic links or keyboard-accessible controls.
-- Watchlist stock row -> Stock Details: missing.
-- Portfolio holding -> Stock Details: missing.
+- Markets stock row -> Stock Details: working through semantic keyboard-accessible links.
+- Watchlist stock row -> Stock Details: working for each stock row.
+- Portfolio holding -> Stock Details: working for each holding.
 - Dashboard stock overview/search -> Stock Details: search works; overview actions are incomplete.
-- News related-stock tag -> Stock Details: missing.
-- AI Insights signal/prediction -> Stock Details: missing.
-- Stock Details add/remove watchlist: missing.
-- Header search should either navigate to the shared search flow or be clearly marked as a future control.
+- News related-stock tag -> Stock Details: working for each related symbol.
+- AI Insights signal/prediction -> Stock Details: working for each signal card.
+- Stock Details add/remove watchlist: working through shared session state.
+- Header search -> Stock Details: working for supported symbols and exact company names, with an inline unknown-stock state.
+- Header notification menu -> Settings Notifications: working.
+- Header/sidebar profile menus -> Account settings: working; Log out is a visible pre-auth placeholder until authentication exists.
+- Header exchange selector: working for local NSE/BSE selection; live exchange data remains future API work.
+- Login/Register forms and Google provider buttons are UI-only until authentication and OAuth are connected in the backend phase.
 
 ### Priority 1: state model
 
@@ -154,51 +190,60 @@ The states should be reusable components, not one-off paragraphs embedded in eac
 
 #### Dashboard
 
-Present: welcome area, market status, search, stock overview, chart shell, AI outlook, technical overview, and news section.
+Present: welcome area, market status, search, stock overview, chart shell, AI outlook, technical overview, and compact latest-news panel.
 
-Remaining: chart tooltip, volume visualization, working timeframe controls, stock statistics, market summary, latest-news extraction into a reusable panel, and loading/empty/error states.
+Remaining: chart tooltip, volume visualization, working timeframe controls, stock statistics, market summary, and loading/empty/error states.
 
 #### Markets
 
 Present: indices, top gainers, top losers, sector performance, and mock stock data.
 
-Remaining: working `View all`, clear row affordance, keyboard access, loading/empty/error states, and a defined most-active list if it remains in the milestone.
+Remaining: loading/empty/error states and a defined most-active list if it remains in the milestone.
 
 #### Stock Details
 
 Present: route, page composition, chart/technical/AI/news visual sections.
 
-Remaining: route-driven data, unknown-symbol state, functional watchlist action, related-stock navigation, and responsive chart/table behavior.
+Remaining: responsive chart/table behavior and broader per-symbol detail records.
 
 #### Watchlist
 
 Present: page layout, mock rows, filtering, and filtered empty feedback.
 
-Remaining: add/remove behavior, persistence for the current session, stock-details navigation, distinction between an empty watchlist and zero filter results, and loading/error placeholders for the future API.
+Remaining: persistence across page reloads, stock catalog search for adding arbitrary symbols, and loading/error placeholders for the future API.
 
 #### Portfolio
 
 Present: portfolio summary, holdings, allocation, and mock presentation.
 
-Remaining: holding navigation, functional portfolio actions, clear zero-holdings state, responsive table behavior, and data contracts for quantity, average price, current price, and P&L.
+Remaining: functional portfolio actions, clear zero-holdings state, responsive table behavior, and data contracts for quantity, average price, current price, and P&L.
 
 #### AI Insights
 
 Present: AI-oriented visual sections and mock analysis content.
 
-Remaining: stock navigation, working news-center action, explicit mock/unavailable labeling, loading/error states, and a typed prediction/explanation contract before connecting an AI service.
+Remaining: explicit mock/unavailable labeling, loading/error states, and a typed prediction/explanation contract before connecting an AI service.
 
 #### News
 
 Present: News page, cards, filtering, and an empty result message.
 
-Remaining: extract `NewsCard` and `NewsPanel` (currently empty files), make `Read` actionable, related-stock navigation, and loading/error states. News-to-stock mapping and sentiment remain backend/data work.
+Remaining: connect article-specific URLs and add loading/error states when the News API is introduced. The current `Read` action opens the mock publisher destination, and related-stock navigation is working. News and Watchlist now use the shared empty-state component. News-to-stock mapping and sentiment remain backend/data work.
 
 #### Settings
 
 Present: Settings route and visual sections.
 
-Remaining: persist settings, implement controls or clearly disable future-only controls, add form feedback, and define account/security boundaries for the backend phase.
+Remaining:
+
+- Make System theme apply the operating-system preference.
+- Add typed controls for market region, timezone, and AI analysis frequency.
+- Add clear save/sync feedback for preference changes.
+- Replace browser-local persistence with authenticated user preferences.
+- Connect profile editing, account security, privacy controls, and active devices.
+- Connect real logout and session invalidation.
+
+The Settings category navigation and local notification, compact-mode, and theme state are complete. Account-backed behavior belongs to the authentication and user-preferences API phase.
 
 ## CSS and Visual Review
 
@@ -219,21 +264,19 @@ Remaining: persist settings, implement controls or clearly disable future-only c
 - Define stable dimensions for chart panels, tables, badges, and icon buttons so dynamic content does not shift layout.
 - Replace or remove unused Vite starter rules in `src/App.css`; `src/main.tsx` does not import that file.
 - Avoid styling clickable behavior on plain `div` elements. Prefer `Link`/`NavLink` for navigation and `button` for actions.
-- Check mobile access to AI Insights, News, and Settings. The current mobile navigation only exposes the primary navigation array, so intelligence and settings links can become unreachable.
+- Verify the six-item mobile navigation and Profile -> Account settings flow at 320px and 375px widths, including active states and tap targets.
 - Test at 320px, 375px, 768px, 1024px, and desktop widths. Pay particular attention to the header search, tables, charts, cards, and bottom navigation.
 
 ## Recommended Implementation Order
 
-1. Fix the two unused imports and make build/lint pass.
-2. Add typed mock data and domain types for stocks, news, indicators, portfolio holdings, and predictions.
-3. Add the shared UI primitives and state components.
-4. Make Stock Details resolve `:symbol` and add not-found behavior.
-5. Finish all stock navigation and watchlist interactions.
-6. Extract reusable News card/panel components and complete News links.
-7. Define page-level loading, empty, error, and disabled states using the shared primitives.
-8. Consolidate CSS and complete focus, hover, responsive, and accessibility polish.
-9. Run a manual route and viewport review, then add focused tests for routing, stock resolution, filtering, and state rendering.
-10. Only after this checklist is complete, begin the Python/FastAPI and API data-flow phase.
+1. Migrate existing page markup to the shared UI primitives.
+2. Move remaining page-specific prediction, chart, and settings records onto the centralized typed data source where applicable.
+3. Finish remaining stock actions and optional watchlist persistence.
+4. Extract reusable News card/panel components and complete News links.
+5. Define page-level loading, empty, error, and disabled states using the shared primitives.
+6. Consolidate remaining duplicate CSS and complete hover, responsive, and accessibility polish, including the six-item mobile navigation and Profile -> Settings flow.
+7. Run a manual route and viewport review, then add focused tests for routing, stock resolution, filtering, and state rendering.
+8. Only after this checklist is complete, begin the Python/FastAPI and API data-flow phase.
 
 ## UI Definition of Done Before APIs
 
@@ -242,11 +285,13 @@ Remaining: persist settings, implement controls or clearly disable future-only c
 - Every visible navigation or action either works or is intentionally disabled with a clear reason.
 - Every stock reference can reach Stock Details.
 - Stock Details changes with the route symbol and handles unknown symbols.
-- Empty, loading, error, and not-found states are defined for all data-bearing surfaces.
+- Empty and not-found states are defined for the current synchronous surfaces; loading and request-error states must be integrated at the future data-access boundary.
 - Mobile users can reach every route and use every primary workflow.
 - Keyboard focus and semantic controls are implemented for interactive elements.
 - Shared primitives are used across pages instead of duplicating visual markup.
 - Mock data and future API data can satisfy the same typed UI contracts.
+- No stock price, company record, news record, or prediction should be hard-coded directly inside a page or reusable component.
+- Settings UI and authentication actions must remain separate: visible controls may be implemented in the frontend, but identity, sessions, permissions, and account data must be enforced by the backend.
 
 ## Backend Handoff Boundary
 

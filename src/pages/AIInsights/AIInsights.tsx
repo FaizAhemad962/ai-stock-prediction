@@ -10,6 +10,9 @@ import {
   Sparkles,
   TrendingUp,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+
+import { mockStocks } from "../../data/mockData";
 
 type Signal = {
   symbol: string;
@@ -20,48 +23,36 @@ type Signal = {
   confidence: number;
 };
 
-const signals: Signal[] = [
-  {
-    symbol: "SUZLON",
-    name: "Suzlon Energy",
-    price: "₹52.40",
-    change: "+2.10%",
-    signal: "Bullish",
-    confidence: 78,
-  },
-  {
-    symbol: "TATASTEEL",
-    name: "Tata Steel",
-    price: "₹168.25",
-    change: "+3.68%",
-    signal: "Bullish",
-    confidence: 74,
-  },
-  {
-    symbol: "RELIANCE",
-    name: "Reliance Industries",
-    price: "₹1,421.30",
-    change: "+0.82%",
-    signal: "Positive",
-    confidence: 69,
-  },
-  {
-    symbol: "TCS",
-    name: "Tata Consultancy Services",
-    price: "₹3,184.50",
-    change: "-0.41%",
-    signal: "Neutral",
-    confidence: 56,
-  },
-  {
-    symbol: "INFY",
-    name: "Infosys",
-    price: "₹1,482.20",
-    change: "-2.14%",
-    signal: "Caution",
-    confidence: 72,
-  },
-];
+const signalBySymbol: Record<string, Signal["signal"]> = {
+  SUZLON: "Bullish",
+  TATASTEEL: "Bullish",
+  RELIANCE: "Positive",
+  TCS: "Neutral",
+  INFY: "Caution",
+};
+
+const confidenceBySymbol: Record<string, number> = {
+  SUZLON: 78,
+  TATASTEEL: 74,
+  RELIANCE: 69,
+  TCS: 56,
+  INFY: 72,
+};
+
+const priceFormatter = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 2,
+});
+
+const signals: Signal[] = mockStocks.map((stock) => ({
+  symbol: stock.symbol,
+  name: stock.name,
+  price: priceFormatter.format(stock.price),
+  change: `${stock.changePercent >= 0 ? "+" : ""}${stock.changePercent.toFixed(2)}%`,
+  signal: signalBySymbol[stock.symbol] ?? "Neutral",
+  confidence: confidenceBySymbol[stock.symbol] ?? 50,
+}));
 
 const factors = [
   {
@@ -97,6 +88,7 @@ const factors = [
 const newsSignals = [
   {
     source: "Economic Times",
+    symbol: "SUZLON",
     title:
       "Renewable energy stocks gain attention as sector outlook improves",
     sentiment: "Positive",
@@ -104,6 +96,7 @@ const newsSignals = [
   },
   {
     source: "Moneycontrol",
+    symbol: "SUZLON",
     title:
       "Institutional interest increases across renewable energy companies",
     sentiment: "Positive",
@@ -111,6 +104,7 @@ const newsSignals = [
   },
   {
     source: "Business Standard",
+    symbol: "SUZLON",
     title:
       "Market participants watch upcoming policy developments",
     sentiment: "Neutral",
@@ -239,15 +233,19 @@ export function AIInsights() {
             <h2>Stocks the AI is watching</h2>
           </div>
 
-          <button className="text-action">
+          <Link className="text-action" to="/markets">
             View all
             <ChevronRight size={13} />
-          </button>
+          </Link>
         </div>
 
         <div className="signal-grid">
           {signals.map((stock) => (
-            <article className="ui-card signal-card" key={stock.symbol}>
+            <Link
+              className="ui-card signal-card signal-card-link"
+              key={stock.symbol}
+              to={`/stock/${stock.symbol}`}
+            >
               <div className="signal-card-header">
                 <div className="signal-stock">
                   <div className="signal-avatar">
@@ -304,7 +302,7 @@ export function AIInsights() {
                   }}
                 />
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       </section>
@@ -410,10 +408,10 @@ export function AIInsights() {
             <h2>News affecting AI signals</h2>
           </div>
 
-          <button className="text-action">
+          <Link className="text-action" to="/news">
             Open news center
             <ChevronRight size={13} />
-          </button>
+          </Link>
         </div>
 
         <div className="ai-news-grid">
@@ -442,10 +440,10 @@ export function AIInsights() {
 
               <h3>{item.title}</h3>
 
-              <button className="read-analysis">
+              <Link className="read-analysis" to={`/stock/${item.symbol}`}>
                 AI analysis
                 <ChevronRight size={12} />
-              </button>
+              </Link>
             </article>
           ))}
         </div>

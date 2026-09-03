@@ -5,124 +5,15 @@ import {
   BarChart3,
   TrendingUp,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-const indices = [
-  {
-    name: "NIFTY 50",
-    value: "24,718.60",
-    change: "+182.45",
-    percentage: "+0.74%",
-    positive: true,
-  },
-  {
-    name: "SENSEX",
-    value: "80,567.42",
-    change: "+594.91",
-    percentage: "+0.74%",
-    positive: true,
-  },
-  {
-    name: "NIFTY BANK",
-    value: "54,231.80",
-    change: "-124.30",
-    percentage: "-0.23%",
-    positive: false,
-  },
-  {
-    name: "NIFTY IT",
-    value: "41,892.25",
-    change: "+386.70",
-    percentage: "+0.93%",
-    positive: true,
-  },
-];
+import { Link } from "react-router-dom";
 
-const gainers = [
-  {
-    symbol: "SUZLON",
-    name: "Suzlon Energy",
-    price: "₹52.40",
-    change: "+4.21%",
-  },
-  {
-    symbol: "TATASTEEL",
-    name: "Tata Steel",
-    price: "₹168.25",
-    change: "+3.68%",
-  },
-  {
-    symbol: "ADANIPORTS",
-    name: "Adani Ports",
-    price: "₹1,412.60",
-    change: "+3.24%",
-  },
-  {
-    symbol: "POWERGRID",
-    name: "Power Grid",
-    price: "₹326.15",
-    change: "+2.91%",
-  },
-];
-
-const losers = [
-  {
-    symbol: "INFY",
-    name: "Infosys",
-    price: "₹1,482.20",
-    change: "-2.14%",
-  },
-  {
-    symbol: "HCLTECH",
-    name: "HCL Technologies",
-    price: "₹1,534.80",
-    change: "-1.82%",
-  },
-  {
-    symbol: "ICICIBANK",
-    name: "ICICI Bank",
-    price: "₹1,276.45",
-    change: "-1.41%",
-  },
-  {
-    symbol: "AXISBANK",
-    name: "Axis Bank",
-    price: "₹1,091.30",
-    change: "-1.18%",
-  },
-];
-
-const sectors = [
-  {
-    name: "Information Technology",
-    performance: "+1.82%",
-    positive: true,
-  },
-  {
-    name: "Renewable Energy",
-    performance: "+1.54%",
-    positive: true,
-  },
-  {
-    name: "Automobile",
-    performance: "+0.92%",
-    positive: true,
-  },
-  {
-    name: "Banking",
-    performance: "-0.23%",
-    positive: false,
-  },
-  {
-    name: "Pharmaceuticals",
-    performance: "-0.61%",
-    positive: false,
-  },
-  {
-    name: "Metals",
-    performance: "+0.48%",
-    positive: true,
-  },
-];
+import { SectionHeader } from "../../components/ui/SectionHeader";
+import {
+  mockMarketGainers,
+  mockMarketIndices,
+  mockMarketLosers,
+  mockSectors,
+} from "../../data/mockData";
 
 export function Markets() {
   return (
@@ -145,7 +36,7 @@ export function Markets() {
       </section>
 
       <section className="market-indices">
-        {indices.map((index) => (
+        {mockMarketIndices.map((index) => (
           <div className="ui-card index-card" key={index.name}>
             <div className="index-card-header">
               <span>{index.name}</span>
@@ -173,28 +64,23 @@ export function Markets() {
         <MarketStockList
           title="Top Gainers"
           icon={<TrendingUp size={15} />}
-          stocks={gainers}
+          stocks={mockMarketGainers}
           positive
         />
 
         <MarketStockList
           title="Top Losers"
           icon={<ArrowDown size={15} />}
-          stocks={losers}
+          stocks={mockMarketLosers}
           positive={false}
         />
       </section>
 
       <section className="sector-section">
-        <div className="section-header">
-          <div>
-            <span className="card-label">SECTOR ANALYSIS</span>
-            <h2>Sector performance</h2>
-          </div>
-        </div>
+        <SectionHeader eyebrow="SECTOR ANALYSIS" title="Sector performance" />
 
         <div className="sector-grid">
-          {sectors.map((sector) => (
+          {mockSectors.map((sector) => (
             <div className="ui-card sector-card" key={sector.name}>
               <div className="sector-icon">
                 <Activity size={15} />
@@ -235,8 +121,6 @@ function MarketStockList({
   stocks,
   positive,
 }: MarketStockListProps) {
-  const navigate = useNavigate();
-
   return (
     <section className="ui-card market-list-card">
       <div className="section-header compact">
@@ -245,15 +129,15 @@ function MarketStockList({
           <h2>{title}</h2>
         </div>
 
-        <button className="view-all-button">View all</button>
+        <Link className="view-all-button" to="/markets">View all</Link>
       </div>
 
       <div className="market-stock-list">
         {stocks.map((stock) => (
-          <div
-            className="market-stock-row"
+          <Link
+            className="market-stock-row stock-row-link"
             key={stock.symbol}
-            onClick={() => navigate(`/stock/${stock.symbol}`)}
+            to={`/stock/${stock.symbol}`}
           >
             <div className="stock-symbol">
               <div className="stock-avatar">{stock.symbol.charAt(0)}</div>
@@ -273,7 +157,7 @@ function MarketStockList({
             >
               {stock.change}
             </span>
-          </div>
+          </Link>
         ))}
       </div>
     </section>

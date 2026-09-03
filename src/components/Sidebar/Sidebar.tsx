@@ -4,10 +4,11 @@ import {
   BrainCircuit,
   LayoutDashboard,
   Newspaper,
-  Settings,
   WalletCards,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 const navigation = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
@@ -22,6 +23,9 @@ const intelligence = [
 ];
 
 export function Sidebar() {
+  const [profileOpen, setProfileOpen] = useState(false);
+  const navigate = useNavigate();
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -63,25 +67,30 @@ export function Sidebar() {
             <span>{label}</span>
           </NavLink>
         ))}
+
       </nav>
 
       <div className="sidebar-bottom">
-        <NavLink
-          to="/settings"
-          className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+        <button
+          className="sidebar-user"
+          onClick={() => setProfileOpen(!profileOpen)}
+          aria-label="Open profile menu"
+          aria-expanded={profileOpen}
         >
-          <Settings size={19} strokeWidth={1.8} />
-          <span>Settings</span>
-        </NavLink>
-
-        <div className="sidebar-user">
           <div className="avatar">U</div>
 
           <div>
             <strong>Investor</strong>
             <span>Free workspace</span>
           </div>
-        </div>
+        </button>
+
+        {profileOpen ? (
+          <div className="sidebar-profile-menu">
+            <NavLink to="/settings#settings-account">Account settings</NavLink>
+            <button onClick={() => navigate("/login")}>Log out</button>
+          </div>
+        ) : null}
       </div>
     </aside>
   );

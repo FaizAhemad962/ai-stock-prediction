@@ -1,8 +1,6 @@
 import {
   ArrowDown,
   ArrowUp,
-  Clock3,
-  ExternalLink,
   Filter,
   Newspaper,
   Search,
@@ -11,124 +9,14 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-type NewsItem = {
-  id: number;
-  source: string;
-  time: string;
-  category: string;
-  title: string;
-  summary: string;
-  sentiment: "Positive" | "Neutral" | "Negative";
-  impact: "High" | "Medium" | "Low";
-  stocks: string[];
-};
+import { NewsPanel } from "../../components/News/NewsPanel";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { mockNewsFeed } from "../../data/mockData";
 
-const newsItems: NewsItem[] = [
-  {
-    id: 1,
-    source: "Economic Times",
-    time: "18 min ago",
-    category: "Renewable Energy",
-    title:
-      "Renewable energy stocks gain momentum as sector outlook improves",
-    summary:
-      "Investors continue to track renewable energy companies as new capacity additions and policy developments support the sector.",
-    sentiment: "Positive",
-    impact: "High",
-    stocks: ["SUZLON", "TATASTEEL"],
-  },
-  {
-    id: 2,
-    source: "Moneycontrol",
-    time: "42 min ago",
-    category: "Markets",
-    title:
-      "Institutional interest increases across selected Indian energy stocks",
-    summary:
-      "Market activity remains elevated as investors monitor institutional flows and improving sector fundamentals.",
-    sentiment: "Positive",
-    impact: "Medium",
-    stocks: ["SUZLON", "RELIANCE"],
-  },
-  {
-    id: 3,
-    source: "Business Standard",
-    time: "1 hr ago",
-    category: "Technology",
-    title:
-      "IT stocks remain mixed as investors assess global technology demand",
-    summary:
-      "Large-cap technology stocks show mixed movement while markets wait for additional clarity around global demand.",
-    sentiment: "Neutral",
-    impact: "Medium",
-    stocks: ["TCS", "INFY"],
-  },
-  {
-    id: 4,
-    source: "CNBC TV18",
-    time: "2 hrs ago",
-    category: "Banking",
-    title:
-      "Large private banks remain in focus following fresh market flows",
-    summary:
-      "Banking stocks continue to attract attention as traders evaluate valuations and upcoming financial results.",
-    sentiment: "Positive",
-    impact: "Medium",
-    stocks: ["HDFCBANK", "RELIANCE"],
-  },
-  {
-    id: 5,
-    source: "Reuters",
-    time: "3 hrs ago",
-    category: "Global Markets",
-    title:
-      "Global markets remain cautious ahead of key economic data",
-    summary:
-      "Investors are monitoring global economic indicators that could influence risk appetite across equity markets.",
-    sentiment: "Neutral",
-    impact: "High",
-    stocks: ["TCS", "RELIANCE"],
-  },
-  {
-    id: 6,
-    source: "Mint",
-    time: "4 hrs ago",
-    category: "Metals",
-    title:
-      "Metal stocks rally as commodity sentiment improves",
-    summary:
-      "Improving commodity prices are supporting selected metal companies and attracting renewed investor interest.",
-    sentiment: "Positive",
-    impact: "Medium",
-    stocks: ["TATASTEEL"],
-  },
-  {
-    id: 7,
-    source: "Financial Express",
-    time: "5 hrs ago",
-    category: "Technology",
-    title:
-      "Investors reassess IT valuations following recent sector movement",
-    summary:
-      "Technology stocks remain sensitive to global demand expectations and currency movements.",
-    sentiment: "Negative",
-    impact: "Low",
-    stocks: ["INFY", "TCS"],
-  },
-  {
-    id: 8,
-    source: "NDTV Profit",
-    time: "6 hrs ago",
-    category: "Markets",
-    title:
-      "Indian equities maintain positive momentum during afternoon trading",
-    summary:
-      "Broad market participation remains healthy while investors continue to monitor sector-specific developments.",
-    sentiment: "Positive",
-    impact: "Medium",
-    stocks: ["SUZLON", "RELIANCE", "TATASTEEL"],
-  },
-];
+const newsItems = mockNewsFeed.map((item) => ({
+  ...item,
+  time: item.publishedAt,
+}));
 
 const categories = [
   "All",
@@ -312,70 +200,13 @@ export function News() {
           </div>
 
           {filteredNews.length > 0 ? (
-            <div className="news-list">
-              {filteredNews.map((item) => (
-                <article
-                  className="ui-card news-article"
-                  key={item.id}
-                >
-                  <div className="news-article-top">
-                    <div className="news-source">
-                      <div className="news-source-icon">
-                        <Newspaper size={14} />
-                      </div>
-
-                      <div>
-                        <strong>{item.source}</strong>
-
-                        <span>
-                          <Clock3 size={9} />
-                          {item.time}
-                        </span>
-                      </div>
-                    </div>
-
-                    <span
-                      className={`impact-badge impact-${item.impact.toLowerCase()}`}
-                    >
-                      {item.impact} impact
-                    </span>
-                  </div>
-
-                  <h3>{item.title}</h3>
-
-                  <p>{item.summary}</p>
-
-                  <div className="news-article-bottom">
-                    <div className="news-stock-tags">
-                      {item.stocks.map((stock) => (
-                        <span key={stock}>{stock}</span>
-                      ))}
-                    </div>
-
-                    <span
-                      className={`article-sentiment sentiment-${item.sentiment.toLowerCase()}`}
-                    >
-                      {item.sentiment}
-                    </span>
-
-                    <button className="article-open-button">
-                      Read
-                      <ExternalLink size={11} />
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
+            <NewsPanel items={filteredNews} />
           ) : (
-            <div className="ui-card news-empty">
-              <Search size={20} />
-
-              <h3>No news found</h3>
-
-              <p>
-                Try changing your search or filter selection.
-              </p>
-            </div>
+            <EmptyState
+              className="ui-card news-empty"
+              title="No news found"
+              description="Try changing your search or filter selection."
+            />
           )}
         </div>
 

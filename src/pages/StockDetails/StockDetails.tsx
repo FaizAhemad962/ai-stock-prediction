@@ -1,4 +1,5 @@
 import {
+  ArrowDown,
   ArrowUp,
   Bookmark,
   CalendarDays,
@@ -8,90 +9,60 @@ import {
   Sparkles,
   TrendingUp,
 } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
 
-const stats = [
-  { label: "Open", value: "₹51.20" },
-  { label: "Previous Close", value: "₹51.32" },
-  { label: "Day High", value: "₹53.10" },
-  { label: "Day Low", value: "₹50.74" },
-  { label: "52W High", value: "₹58.65" },
-  { label: "52W Low", value: "₹32.10" },
-  { label: "Market Cap", value: "₹71.4K Cr" },
-  { label: "Volume", value: "8.42 Cr" },
-];
-
-const technicals = [
-  {
-    name: "RSI",
-    value: "58.2",
-    signal: "Neutral",
-    type: "neutral",
-  },
-  {
-    name: "MACD",
-    value: "+1.24",
-    signal: "Bullish",
-    type: "positive",
-  },
-  {
-    name: "50 DMA",
-    value: "₹47.82",
-    signal: "Above",
-    type: "positive",
-  },
-  {
-    name: "200 DMA",
-    value: "₹41.56",
-    signal: "Above",
-    type: "positive",
-  },
-];
-
-const news = [
-  {
-    source: "Economic Times",
-    time: "32 min ago",
-    title:
-      "Renewable energy sector attracts renewed investor attention",
-    sentiment: "Positive",
-  },
-  {
-    source: "Moneycontrol",
-    time: "1 hr ago",
-    title:
-      "Wind energy companies remain in focus as capacity additions accelerate",
-    sentiment: "Positive",
-  },
-  {
-    source: "Business Standard",
-    time: "2 hrs ago",
-    title:
-      "Indian renewable energy market sees increasing institutional interest",
-    sentiment: "Neutral",
-  },
-];
+import { EmptyState } from "../../components/ui/EmptyState";
+import { useWatchlist } from "../../components/WatchlistContext/useWatchlist";
+import { SectionHeader } from "../../components/ui/SectionHeader";
+import { StatCard } from "../../components/ui/StatCard";
+import { getMockStock, mockStockDetail } from "../../data/mockData";
 
 export function StockDetails() {
+  const { symbol = "SUZLON" } = useParams();
+  const stock = getMockStock(symbol);
+  const { isWatched, toggleWatchlist } = useWatchlist();
+
+  if (!stock) {
+    return (
+      <EmptyState
+        className="stock-details-page"
+        title="Stock not found"
+        description={`No mock market data is available for ${symbol.toUpperCase()}.`}
+        action={<Link className="view-all-button" to="/markets">Back to markets</Link>}
+      />
+    );
+  }
+
+  const isPositive = stock.change >= 0;
+  const price = `₹${stock.price.toFixed(2)}`;
+  const change = `${isPositive ? "+" : "-"}₹${Math.abs(stock.change).toFixed(2)}`;
+  const percentage = `${isPositive ? "+" : "-"}${Math.abs(stock.changePercent).toFixed(2)}%`;
+  const { stats, technicals, news } = mockStockDetail;
+
   return (
     <div className="stock-details-page">
       <section className="stock-detail-header">
         <div className="stock-company">
-          <div className="large-stock-avatar">S</div>
+          <div className="large-stock-avatar">{stock.symbol.charAt(0)}</div>
 
           <div>
             <div className="stock-title-row">
-              <h1>Suzlon Energy</h1>
+              <h1>{stock.name}</h1>
 
               <span className="exchange-badge">NSE</span>
             </div>
 
-            <p>SUZLON · Renewable Energy</p>
+            <p>{stock.symbol} · {stock.sector}</p>
           </div>
         </div>
 
-        <button className="watchlist-button">
+        <button
+          className="watchlist-button"
+          onClick={() => toggleWatchlist(stock.symbol)}
+          aria-pressed={isWatched(stock.symbol)}
+        >
           <Bookmark size={15} />
-          Add to watchlist
+          {isWatched(stock.symbol) ? "Remove from watchlist" : "Add to watchlist"}
         </button>
       </section>
 
@@ -99,12 +70,12 @@ export function StockDetails() {
         <div>
           <span className="card-label">CURRENT PRICE</span>
 
-          <div className="large-price">₹52.40</div>
+          <div className="large-price">{price}</div>
 
-          <div className="price-change positive">
-            <ArrowUp size={14} />
-            <strong>₹1.08</strong>
-            <span>+2.10%</span>
+          <div className={`price-change ${isPositive ? "positive" : "negative"}`}>
+            {isPositive ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+            <strong>{change}</strong>
+            <span>{percentage}</span>
             <span className="change-period">Today</span>
           </div>
         </div>
@@ -126,7 +97,7 @@ export function StockDetails() {
         <div className="chart-header">
           <div>
             <span className="card-label">PRICE HISTORY</span>
-            <h2>SUZLON</h2>
+            <h2>{stock.symbol}</h2>
           </div>
 
           <div className="chart-controls">
@@ -200,19 +171,11 @@ export function StockDetails() {
       </section>
 
       <section className="stats-section">
-        <div className="section-header">
-          <div>
-            <span className="card-label">MARKET DATA</span>
-            <h2>Key statistics</h2>
-          </div>
-        </div>
+        <SectionHeader eyebrow="MARKET DATA" title="Key statistics" />
 
         <div className="stats-grid">
           {stats.map((stat) => (
-            <div className="ui-card stat-card" key={stat.label}>
-              <span>{stat.label}</span>
-              <strong>{stat.value}</strong>
-            </div>
+            <StatCard key={stat.label} label={stat.label} value={stat.value} />
           ))}
         </div>
       </section>
@@ -293,17 +256,16 @@ export function StockDetails() {
       </section>
 
       <section className="stock-news-section">
-        <div className="section-header">
-          <div>
-            <span className="card-label">NEWS INTELLIGENCE</span>
-            <h2>Latest Suzlon news</h2>
-          </div>
-
-          <button className="view-all-button">
-            View all
-            <ChevronDown size={13} />
-          </button>
-        </div>
+        <SectionHeader
+          eyebrow="NEWS INTELLIGENCE"
+          title={`Latest ${stock.name} news`}
+          action={
+            <button className="view-all-button">
+              View all
+              <ChevronDown size={13} />
+            </button>
+          }
+        />
 
         <div className="stock-news-list">
           {news.map((item) => (

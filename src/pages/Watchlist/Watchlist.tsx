@@ -7,6 +7,10 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useWatchlist } from "../../components/WatchlistContext/useWatchlist";
+import { mockStocks } from "../../data/mockData";
+import { EmptyState } from "../../components/ui/EmptyState";
 
 type Stock = {
   symbol: string;
@@ -17,60 +21,34 @@ type Stock = {
   signal: "Bullish" | "Positive" | "Neutral" | "Caution";
 };
 
-const initialStocks: Stock[] = [
-  {
-    symbol: "SUZLON",
-    name: "Suzlon Energy",
-    price: "₹52.40",
-    change: "+2.10%",
-    changeValue: "+₹1.08",
-    signal: "Bullish",
-  },
-  {
-    symbol: "RELIANCE",
-    name: "Reliance Industries",
-    price: "₹1,421.30",
-    change: "+0.82%",
-    changeValue: "+₹11.55",
-    signal: "Positive",
-  },
-  {
-    symbol: "TCS",
-    name: "Tata Consultancy Services",
-    price: "₹3,184.50",
-    change: "-0.41%",
-    changeValue: "-₹13.10",
-    signal: "Neutral",
-  },
-  {
-    symbol: "INFY",
-    name: "Infosys",
-    price: "₹1,482.20",
-    change: "-2.14%",
-    changeValue: "-₹32.40",
-    signal: "Caution",
-  },
-  {
-    symbol: "TATASTEEL",
-    name: "Tata Steel",
-    price: "₹168.25",
-    change: "+3.68%",
-    changeValue: "+₹5.97",
-    signal: "Bullish",
-  },
-  {
-    symbol: "HDFCBANK",
-    name: "HDFC Bank",
-    price: "₹1,742.60",
-    change: "+0.36%",
-    changeValue: "+₹6.25",
-    signal: "Positive",
-  },
-];
+const signalBySymbol: Record<string, Stock["signal"]> = {
+  SUZLON: "Bullish",
+  RELIANCE: "Positive",
+  TCS: "Neutral",
+  INFY: "Caution",
+  TATASTEEL: "Bullish",
+  HDFCBANK: "Positive",
+};
+
+const currencyFormatter = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 2,
+});
+
+const initialStocks: Stock[] = mockStocks.map((stock) => ({
+  symbol: stock.symbol,
+  name: stock.name,
+  price: currencyFormatter.format(stock.price),
+  change: `${stock.changePercent >= 0 ? "+" : ""}${stock.changePercent.toFixed(2)}%`,
+  changeValue: `${stock.change >= 0 ? "+" : "-"}${currencyFormatter.format(Math.abs(stock.change))}`,
+  signal: signalBySymbol[stock.symbol] ?? "Neutral",
+}));
 
 export function Watchlist() {
-  const [stocks, setStocks] = useState<Stock[]>(initialStocks);
+  const { symbols, toggleWatchlist } = useWatchlist();
   const [search, setSearch] = useState("");
+  const stocks = initialStocks.filter((stock) => symbols.includes(stock.symbol));
 
   const filteredStocks = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -86,10 +64,12 @@ export function Watchlist() {
     );
   }, [search, stocks]);
 
-  const removeStock = (symbol: string) => {
-    setStocks((current) =>
-      current.filter((stock) => stock.symbol !== symbol),
-    );
+  const addStock = () => {
+    const nextStock = initialStocks.find((stock) => !symbols.includes(stock.symbol));
+
+    if (nextStock) {
+      toggleWatchlist(nextStock.symbol);
+    }
   };
 
   return (
@@ -105,7 +85,7 @@ export function Watchlist() {
           </p>
         </div>
 
-        <button className="primary-button">
+        <button className="primary-button" onClick={addStock}>
           <Plus size={14} />
           Add stock
         </button>
@@ -188,7 +168,10 @@ export function Watchlist() {
                     className="watchlist-row"
                     key={stock.symbol}
                   >
-                    <div className="watch-stock">
+                    <Link
+                      className="watch-stock stock-link"
+                      to={`/stock/${stock.symbol}`}
+                    >
                       <div className="watch-stock-avatar">
                         {stock.symbol.charAt(0)}
                       </div>
@@ -197,7 +180,7 @@ export function Watchlist() {
                         <strong>{stock.symbol}</strong>
                         <span>{stock.name}</span>
                       </div>
-                    </div>
+                    </Link>
 
                     <div className="watch-price">
                       <strong>{stock.price}</strong>
@@ -229,7 +212,7 @@ export function Watchlist() {
                     <button
                       className="remove-stock-button"
                       title={`Remove ${stock.symbol}`}
-                      onClick={() => removeStock(stock.symbol)}
+                      onClick={() => toggleWatchlist(stock.symbol)}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -239,15 +222,15 @@ export function Watchlist() {
             </div>
           </div>
         ) : (
-          <div className="watchlist-empty">
-            <Search size={22} />
-
-            <h3>No stocks found</h3>
-
-            <p>
-              Try searching for another stock in your watchlist.
-            </p>
-          </div>
+          <EmptyState
+            className="watchlist-empty"
+            title={stocks.length === 0 ? "Your watchlist is empty" : "No stocks found"}
+            description={
+              stocks.length === 0
+                ? "Add a stock to start tracking its market activity."
+                : "Try searching for another stock in your watchlist."
+            }
+          />
         )}
       </section>
 

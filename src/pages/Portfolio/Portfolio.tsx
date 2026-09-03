@@ -6,6 +6,8 @@ import {
   PieChart,
   TrendingUp,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { getMockStock, mockPortfolio } from "../../data/mockData";
 
 type Holding = {
   symbol: string;
@@ -18,58 +20,34 @@ type Holding = {
   positive: boolean;
 };
 
-const holdings: Holding[] = [
-  {
-    symbol: "SUZLON",
-    name: "Suzlon Energy",
-    quantity: 500,
-    averagePrice: "₹46.20",
-    currentPrice: "₹52.40",
-    pnl: "+₹3,100",
-    pnlPercentage: "+13.42%",
-    positive: true,
-  },
-  {
-    symbol: "RELIANCE",
-    name: "Reliance Industries",
-    quantity: 25,
-    averagePrice: "₹1,365.40",
-    currentPrice: "₹1,421.30",
-    pnl: "+₹1,397.50",
-    pnlPercentage: "+4.10%",
-    positive: true,
-  },
-  {
-    symbol: "TCS",
-    name: "Tata Consultancy Services",
-    quantity: 10,
-    averagePrice: "₹3,020.00",
-    currentPrice: "₹3,184.50",
-    pnl: "+₹1,645",
-    pnlPercentage: "+5.45%",
-    positive: true,
-  },
-  {
-    symbol: "INFY",
-    name: "Infosys",
-    quantity: 20,
-    averagePrice: "₹1,520.00",
-    currentPrice: "₹1,482.20",
-    pnl: "-₹756",
-    pnlPercentage: "-2.49%",
-    positive: false,
-  },
-  {
-    symbol: "TATASTEEL",
-    name: "Tata Steel",
-    quantity: 100,
-    averagePrice: "₹151.80",
-    currentPrice: "₹168.25",
-    pnl: "+₹1,645",
-    pnlPercentage: "+10.84%",
-    positive: true,
-  },
-];
+const currencyFormatter = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 2,
+});
+
+const holdings: Holding[] = mockPortfolio.flatMap((holding) => {
+  const stock = getMockStock(holding.symbol);
+
+  if (!stock) {
+    return [];
+  }
+
+  const pnlValue = (holding.currentPrice - holding.averagePrice) * holding.quantity;
+  const pnlPercentageValue =
+    (pnlValue / (holding.averagePrice * holding.quantity)) * 100;
+
+  return [{
+    symbol: stock.symbol,
+    name: stock.name,
+    quantity: holding.quantity,
+    averagePrice: currencyFormatter.format(holding.averagePrice),
+    currentPrice: currencyFormatter.format(holding.currentPrice),
+    pnl: `${pnlValue >= 0 ? "+" : ""}${currencyFormatter.format(pnlValue)}`,
+    pnlPercentage: `${pnlPercentageValue >= 0 ? "+" : ""}${pnlPercentageValue.toFixed(2)}%`,
+    positive: pnlValue >= 0,
+  }];
+});
 
 const allocation = [
   {
@@ -293,7 +271,10 @@ export function Portfolio() {
           <div className="holdings-list">
             {holdings.map((holding) => (
               <div className="holding-row" key={holding.symbol}>
-                <div className="holding-stock">
+                <Link
+                  className="holding-stock stock-link"
+                  to={`/stock/${holding.symbol}`}
+                >
                   <div className="holding-avatar">
                     {holding.symbol.charAt(0)}
                   </div>
@@ -302,7 +283,7 @@ export function Portfolio() {
                     <strong>{holding.symbol}</strong>
                     <span>{holding.name}</span>
                   </div>
-                </div>
+                </Link>
 
                 <span className="holding-value">
                   {holding.quantity}

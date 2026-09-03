@@ -15,14 +15,97 @@ import {
   User,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+
+function readStoredBoolean(key: string, fallback: boolean) {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  return window.localStorage.getItem(key) === null
+    ? fallback
+    : window.localStorage.getItem(key) === "true";
+}
+
+function readStoredTheme(): "dark" | "system" {
+  if (typeof window === "undefined") {
+    return "dark";
+  }
+
+  return window.localStorage.getItem("nexus-theme") === "system"
+    ? "system"
+    : "dark";
+}
+
+function readHashSection() {
+  if (typeof window === "undefined") {
+    return "account";
+  }
+
+  return window.location.hash.replace("#settings-", "") || "account";
+}
 
 export function Settings() {
-  const [notifications, setNotifications] = useState(true);
-  const [priceAlerts, setPriceAlerts] = useState(true);
-  const [newsAlerts, setNewsAlerts] = useState(true);
-  const [aiAlerts, setAiAlerts] = useState(true);
-  const [compactMode, setCompactMode] = useState(false);
+  const location = useLocation();
+  const [notifications, setNotifications] = useState(() =>
+    readStoredBoolean("nexus-notifications", true),
+  );
+  const [priceAlerts, setPriceAlerts] = useState(() =>
+    readStoredBoolean("nexus-price-alerts", true),
+  );
+  const [newsAlerts, setNewsAlerts] = useState(() =>
+    readStoredBoolean("nexus-news-alerts", true),
+  );
+  const [aiAlerts, setAiAlerts] = useState(() =>
+    readStoredBoolean("nexus-ai-alerts", true),
+  );
+  const [compactMode, setCompactMode] = useState(() =>
+    readStoredBoolean("nexus-compact-mode", false),
+  );
+  const [theme, setTheme] = useState<"dark" | "system">(readStoredTheme);
+  const [actionMessage, setActionMessage] = useState("");
+  const [activeSection, setActiveSection] = useState(readHashSection);
+
+  useEffect(() => {
+    const settings = {
+      "nexus-notifications": notifications,
+      "nexus-price-alerts": priceAlerts,
+      "nexus-news-alerts": newsAlerts,
+      "nexus-ai-alerts": aiAlerts,
+      "nexus-compact-mode": compactMode,
+      "nexus-theme": theme,
+    };
+
+    Object.entries(settings).forEach(([key, value]) => {
+      window.localStorage.setItem(key, String(value));
+    });
+  }, [aiAlerts, compactMode, newsAlerts, notifications, priceAlerts, theme]);
+
+  useEffect(() => {
+    const section = location.hash.replace("#settings-", "");
+
+    if (!section) {
+      return;
+    }
+
+    document.getElementById(`settings-${section}`)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [location.hash]);
+
+  const handleDeferredAction = (label: string) => {
+    setActionMessage(`${label} will be available after authentication is connected.`);
+  };
+
+  const navigateToSection = (section: string) => {
+    setActiveSection(section);
+    document.getElementById(`settings-${section}`)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
 
   return (
     <div className="settings-page">
@@ -37,9 +120,9 @@ export function Settings() {
           </p>
         </div>
 
-        <div className="settings-status">
+        <div className="settings-status" role="status" aria-live="polite">
           <span />
-          All changes saved
+          {actionMessage || "All changes saved"}
         </div>
       </section>
 
@@ -57,27 +140,47 @@ export function Settings() {
           </div>
 
           <div className="settings-nav-list">
-            <button className="active">
+            <button
+              className={activeSection === "account" ? "active" : ""}
+              aria-current={activeSection === "account" ? "page" : undefined}
+              onClick={() => navigateToSection("account")}
+            >
               <User size={13} />
               Account
             </button>
 
-            <button>
+            <button
+              className={activeSection === "notifications" ? "active" : ""}
+              aria-current={activeSection === "notifications" ? "page" : undefined}
+              onClick={() => navigateToSection("notifications")}
+            >
               <Bell size={13} />
               Notifications
             </button>
 
-            <button>
+            <button
+              className={activeSection === "appearance" ? "active" : ""}
+              aria-current={activeSection === "appearance" ? "page" : undefined}
+              onClick={() => navigateToSection("appearance")}
+            >
               <Palette size={13} />
               Appearance
             </button>
 
-            <button>
+            <button
+              className={activeSection === "privacy" ? "active" : ""}
+              aria-current={activeSection === "privacy" ? "page" : undefined}
+              onClick={() => navigateToSection("privacy")}
+            >
               <Shield size={13} />
               Privacy & Security
             </button>
 
-            <button>
+            <button
+              className={activeSection === "data" ? "active" : ""}
+              aria-current={activeSection === "data" ? "page" : undefined}
+              onClick={() => navigateToSection("data")}
+            >
               <Database size={13} />
               Data & AI
             </button>
@@ -90,7 +193,7 @@ export function Settings() {
         </aside>
 
         <main className="settings-content">
-          <section className="settings-section">
+          <section className="settings-section" id="settings-account">
             <div className="settings-section-heading">
               <div>
                 <span className="card-label">ACCOUNT</span>
@@ -111,7 +214,7 @@ export function Settings() {
                   </span>
                 </div>
 
-                <button className="settings-action">
+                <button className="settings-action" onClick={() => handleDeferredAction("Profile editing")}>
                   Edit
                   <ChevronRight size={12} />
                 </button>
@@ -127,7 +230,7 @@ export function Settings() {
                   <span>India · NSE & BSE</span>
                 </div>
 
-                <button className="settings-action">
+                <button className="settings-action" onClick={() => handleDeferredAction("Market region changes")}>
                   Change
                   <ChevronRight size={12} />
                 </button>
@@ -143,7 +246,7 @@ export function Settings() {
                   <span>Asia/Kolkata · IST</span>
                 </div>
 
-                <button className="settings-action">
+                <button className="settings-action" onClick={() => handleDeferredAction("Timezone changes")}>
                   Change
                   <ChevronRight size={12} />
                 </button>
@@ -151,7 +254,7 @@ export function Settings() {
             </div>
           </section>
 
-          <section className="settings-section">
+          <section className="settings-section" id="settings-notifications">
             <div className="settings-section-heading">
               <div>
                 <span className="card-label">NOTIFICATIONS</span>
@@ -202,7 +305,7 @@ export function Settings() {
             </div>
           </section>
 
-          <section className="settings-section">
+          <section className="settings-section" id="settings-appearance">
             <div className="settings-section-heading">
               <div>
                 <span className="card-label">APPEARANCE</span>
@@ -218,16 +321,24 @@ export function Settings() {
 
                 <div className="settings-row-content">
                   <strong>Theme</strong>
-                  <span>Dark interface</span>
+                  <span>{theme === "dark" ? "Dark interface" : "System preference"}</span>
                 </div>
 
                 <div className="theme-options">
-                  <button className="theme-option active">
+                  <button
+                    className={`theme-option ${theme === "dark" ? "active" : ""}`}
+                    onClick={() => setTheme("dark")}
+                    aria-pressed={theme === "dark"}
+                  >
                     <Moon size={11} />
                     Dark
                   </button>
 
-                  <button className="theme-option">
+                  <button
+                    className={`theme-option ${theme === "system" ? "active" : ""}`}
+                    onClick={() => setTheme("system")}
+                    aria-pressed={theme === "system"}
+                  >
                     <Monitor size={11} />
                     System
                   </button>
@@ -246,7 +357,7 @@ export function Settings() {
             </div>
           </section>
 
-          <section className="settings-section">
+          <section className="settings-section" id="settings-privacy">
             <div className="settings-section-heading">
               <div>
                 <span className="card-label">PRIVACY & SECURITY</span>
@@ -272,7 +383,7 @@ export function Settings() {
                   </span>
                 </div>
 
-                <button className="settings-action">
+                <button className="settings-action" onClick={() => handleDeferredAction("Account security") }>
                   Manage
                   <ChevronRight size={12} />
                 </button>
@@ -290,7 +401,7 @@ export function Settings() {
                   </span>
                 </div>
 
-                <button className="settings-action">
+                <button className="settings-action" onClick={() => handleDeferredAction("Privacy controls") }>
                   Review
                   <ChevronRight size={12} />
                 </button>
@@ -306,7 +417,7 @@ export function Settings() {
                   <span>2 devices currently connected.</span>
                 </div>
 
-                <button className="settings-action">
+                <button className="settings-action" onClick={() => handleDeferredAction("Active device management") }>
                   View
                   <ChevronRight size={12} />
                 </button>
@@ -314,7 +425,7 @@ export function Settings() {
             </div>
           </section>
 
-          <section className="settings-section">
+          <section className="settings-section" id="settings-data">
             <div className="settings-section-heading">
               <div>
                 <span className="card-label">DATA & AI</span>
@@ -335,7 +446,7 @@ export function Settings() {
                   </span>
                 </div>
 
-                <button className="settings-action">
+                <button className="settings-action" onClick={() => handleDeferredAction("AI analysis frequency") }>
                   Change
                   <ChevronRight size={12} />
                 </button>

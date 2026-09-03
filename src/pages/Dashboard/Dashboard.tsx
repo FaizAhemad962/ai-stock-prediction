@@ -1,10 +1,17 @@
 import { AIOutlook } from "../../components/AIOutlook/AIOutlook";
+import { NewsPanel } from "../../components/News/NewsPanel";
+import { SectionHeader } from "../../components/ui/SectionHeader";
+import { mockNewsFeed } from "../../data/mockData";
 
 import { StockChart } from "../../components/StockChart/StockChart";
 import { StockOverview } from "../../components/StockOverview/StockOverview";
 import { StockSearch } from "../../components/StockSearch/StockSearch";
 import { TechnicalIndicators } from "../../components/TechnicalIndicators/TechnicalIndicators";
-import { News } from "../News/News";
+
+const dashboardNews = mockNewsFeed.slice(0, 3).map((item) => ({
+  ...item,
+  time: item.publishedAt,
+}));
 
 export function Dashboard() {
   return (
@@ -45,7 +52,10 @@ export function Dashboard() {
 
       <TechnicalIndicators />
 
-      <News />
+      <section className="dashboard-news-section">
+        <SectionHeader eyebrow="NEWS INTELLIGENCE" title="Latest market news" />
+        <NewsPanel items={dashboardNews} />
+      </section>
     </>
   );
 }
