@@ -80,7 +80,7 @@ export function Markets() {
   }
 
   return (
-    <div className="markets-page">
+    <div className="markets-page" data-tour="markets">
       <section className="page-heading">
         <div>
           <p className="eyebrow">MARKET OVERVIEW</p>

@@ -14,6 +14,7 @@ import { Settings } from "./pages/Settings/Settings";
 import { StockDetails } from "./pages/StockDetails/StockDetails";
 import { Login } from "./pages/Login/Login";
 import { Register } from "./pages/Register/Register";
+import { ProductTour } from "./components/ProductTour/ProductTour";
 
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
     <BrowserRouter>
       <AppErrorBoundary>
         <WatchlistProvider>
+          <ProductTour />
           <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

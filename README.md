@@ -11,6 +11,8 @@ Backend work has started. The FastAPI foundation, complete typed mock API surfac
 
 The UI is not yet production-complete: Settings has local preference behavior, but account, security, authenticated preferences, and real logout still require the backend. See the detailed UI and backend roadmaps before implementing those workflows.
 
+The app includes a first-visit product tour. It explains the main routes, stock research workflow, and how AI insights combine historical prices, technical indicators, market context, and news. Use the Help icon in the Header to reopen it.
+
 The current code structure and visual language are fixed foundations for this phase. UI work must preserve the existing Vite/React/TypeScript architecture, route paths, page/component folders, `MainLayout` pattern, `src/index.css` styling system, typography, colors, and overall product identity. Improvements should be incremental and compatible with the existing structure.
 
 Stock values shown during this phase are temporary mock data. Keep them centralized in `src/data/mockData.ts` and typed through `src/types/stock.ts`; do not duplicate stock records or hard-code prices inside page and component files. The future Python backend should return data compatible with these UI contracts.

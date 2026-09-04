@@ -71,7 +71,7 @@ export function AIInsights() {
   }));
 
   return (
-    <div className="ai-insights-page">
+    <div className="ai-insights-page" data-tour="ai-insights">
       <section className="page-heading">
         <div>
           <p className="eyebrow">INTELLIGENCE CENTER</p>

@@ -142,6 +142,7 @@ The existing architecture and visual language are approved foundations. Future w
 - Header exchange indicator now opens an NSE/BSE selector with the selected exchange visible.
 - Login and Register routes now provide email/password and Google provider entry points for the frontend flow.
 - AI Insights now receives its metrics, stock display values, factors, risks, news signals, and analysis copy from the expanded `/api/insights` mock response.
+- A route-aware Product Tour now has dedicated targets for every Sidebar item, Profile/Settings, and the AI Insights page; it opens on first Dashboard visit and can be reopened from the Header Help control.
 
 ## What Is Missing or Incomplete
 
@@ -257,6 +258,10 @@ Remaining:
 - Connect real logout and session invalidation.
 
 The Settings category navigation and local notification, compact-mode, and theme state are complete. Account-backed behavior belongs to the authentication and user-preferences API phase.
+
+#### Onboarding
+
+Present: a dismissible route-aware tour covering Dashboard, Markets, Watchlist, Portfolio, News, AI Insights, Settings, and responsible prediction interpretation. Completion is stored in browser storage, and the Help icon reopens the tour.
 
 ## CSS and Visual Review
 

@@ -78,7 +78,7 @@ export function Watchlist() {
   };
 
   return (
-    <div className="watchlist-page">
+    <div className="watchlist-page" data-tour="watchlist">
       <section className="page-heading">
         <div>
           <p className="eyebrow">YOUR MARKET LIST</p>

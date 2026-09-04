@@ -12,15 +12,15 @@ import { useState } from "react";
 import { logout } from "../../services/api";
 
 const navigation = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-  { label: "Markets", icon: BarChart3, path: "/markets" },
-  { label: "Watchlist", icon: Bookmark, path: "/watchlist" },
-  { label: "Portfolio", icon: WalletCards, path: "/portfolio" },
+  { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard", tour: "nav-dashboard" },
+  { label: "Markets", icon: BarChart3, path: "/markets", tour: "nav-markets" },
+  { label: "Watchlist", icon: Bookmark, path: "/watchlist", tour: "nav-watchlist" },
+  { label: "Portfolio", icon: WalletCards, path: "/portfolio", tour: "nav-portfolio" },
 ];
 
 const intelligence = [
-  { label: "AI Insights", icon: BrainCircuit, path: "/ai-insights" },
-  { label: "News", icon: Newspaper, path: "/news" },
+  { label: "AI Insights", icon: BrainCircuit, path: "/ai-insights", tour: "nav-ai-insights" },
+  { label: "News", icon: Newspaper, path: "/news", tour: "nav-news" },
 ];
 
 export function Sidebar() {
@@ -28,7 +28,7 @@ export function Sidebar() {
   const navigate = useNavigate();
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" data-tour="sidebar">
       <div className="brand">
         <div className="brand-mark">N</div>
 
@@ -41,10 +41,11 @@ export function Sidebar() {
       <nav className="sidebar-nav">
         <span className="nav-section-title">WORKSPACE</span>
 
-        {navigation.map(({ label, icon: Icon, path }) => (
+        {navigation.map(({ label, icon: Icon, path, tour }) => (
           <NavLink
             key={label}
             to={path}
+            data-tour={tour}
             end={path === "/dashboard"}
             className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
           >
@@ -57,10 +58,11 @@ export function Sidebar() {
           INTELLIGENCE
         </span>
 
-        {intelligence.map(({ label, icon: Icon, path }) => (
+        {intelligence.map(({ label, icon: Icon, path, tour }) => (
           <NavLink
             key={label}
             to={path}
+            data-tour={tour}
             end
             className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
           >
@@ -74,6 +76,7 @@ export function Sidebar() {
       <div className="sidebar-bottom">
         <button
           className="sidebar-user"
+          data-tour="nav-profile"
           onClick={() => setProfileOpen(!profileOpen)}
           aria-label="Open profile menu"
           aria-expanded={profileOpen}

@@ -36,6 +36,7 @@ Settings is only partially complete. Preserve its current layout and local prefe
 - Every data-bearing page must define loading, empty, error, and not-found behavior where applicable.
 - Use semantic `Link`/`NavLink` elements for navigation and `button` elements for actions. Do not use clickable `div` elements.
 - Every interactive control must have an accessible name, visible keyboard focus, and a working action or an intentionally disabled state.
+- Preserve the route-aware Product Tour and keep its explanations aligned with actual UI/API behavior when adding new workflows.
 - Keep desktop, tablet, and 320px mobile layouts usable. Do not make routes inaccessible on mobile; Settings is intentionally reached through the Profile menu rather than duplicated in bottom navigation.
 - Keep the existing visual language and CSS variables in `src/index.css`; consolidate duplicate selectors instead of adding more global overrides.
 

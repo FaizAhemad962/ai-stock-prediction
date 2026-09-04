@@ -63,7 +63,9 @@ export function Dashboard() {
 
       <StockSearch />
 
-      <StockOverview />
+      <div data-tour="dashboard-overview">
+        <StockOverview />
+      </div>
 
       <section className="dashboard-main-grid">
         <StockChart />

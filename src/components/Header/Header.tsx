@@ -1,4 +1,4 @@
-import { Bell, ChevronDown, Search } from "lucide-react";
+import { Bell, ChevronDown, CircleHelp, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -78,7 +78,7 @@ export function Header() {
 
   return (
     <header className="top-header">
-      <div className="header-search">
+      <div className="header-search" data-tour="search">
         <Search size={19} />
 
         <input
@@ -107,6 +107,13 @@ export function Header() {
       </div>
 
       <div className="header-actions" ref={menuRef}>
+        <button
+          className="icon-button"
+          aria-label="Open product tour"
+          onClick={() => window.dispatchEvent(new Event("nexus:open-tour"))}
+        >
+          <CircleHelp size={19} />
+        </button>
         <div className="exchange-selector">
           <button
             className="market-indicator"

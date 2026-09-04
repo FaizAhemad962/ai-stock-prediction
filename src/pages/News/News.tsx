@@ -109,7 +109,7 @@ export function News() {
   }
 
   return (
-    <div className="news-page">
+    <div className="news-page" data-tour="news">
       <section className="page-heading">
         <div>
           <p className="eyebrow">MARKET INTELLIGENCE</p>

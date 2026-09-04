@@ -155,7 +155,7 @@ export function Settings() {
   };
 
   return (
-    <div className="settings-page">
+    <div className="settings-page" data-tour="settings">
       <section className="page-heading">
         <div>
           <p className="eyebrow">APPLICATION CONTROL</p>

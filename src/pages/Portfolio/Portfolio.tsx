@@ -112,7 +112,7 @@ export function Portfolio() {
   if (error) return <ErrorState className="portfolio-page" title="Portfolio unavailable" description={error} />;
 
   return (
-    <div className="portfolio-page">
+    <div className="portfolio-page" data-tour="portfolio">
       <section className="page-heading">
         <div>
           <p className="eyebrow">YOUR INVESTMENTS</p>

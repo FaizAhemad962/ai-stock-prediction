@@ -579,6 +579,129 @@ kbd {
   padding: 32px 18px;
 }
 
+/* Product tour */
+
+.product-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+
+.product-tour-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: rgba(4, 6, 10, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.product-tour-backdrop.has-target {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.product-tour-dim-panel {
+  position: fixed;
+  z-index: 0;
+  background: rgba(4, 6, 10, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.product-tour-spotlight {
+  position: fixed;
+  z-index: 1;
+  border: 2px solid #9eb1ff;
+  border-radius: 10px;
+  background: rgba(109, 140, 255, 0.12);
+  box-shadow: 0 0 28px rgba(109, 140, 255, 0.45);
+  pointer-events: none;
+  transition: top 180ms ease, left 180ms ease, width 180ms ease, height 180ms ease;
+}
+
+.product-tour-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(92vw, 430px);
+  padding: 25px;
+  border: 1px solid rgba(113, 135, 255, 0.3);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(20, 24, 34, 0.98), rgba(10, 13, 20, 0.98));
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.45);
+  transform: translate(-50%, -50%);
+}
+
+.product-tour-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 17px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(109, 140, 255, 0.14);
+  color: #9eb1ff;
+}
+
+.product-tour-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.product-tour-close:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.product-tour-card h2 {
+  margin: 9px 0 8px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 22px;
+}
+
+.product-tour-card p {
+  margin: 0;
+  color: var(--muted-light);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.product-tour-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.product-tour-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted-light);
+  font-size: 10px;
+}
+
+.product-tour-actions button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.product-tour-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
 .auth-panel {
   width: min(100%, 430px);
   padding: 30px;
