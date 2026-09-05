@@ -16,6 +16,7 @@ type Insight = {
 export function AIOutlook() {
   const [insight, setInsight] = useState<Insight | null>(null);
   const [error, setError] = useState("");
+  const [showUnavailable, setShowUnavailable] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -44,7 +45,7 @@ export function AIOutlook() {
         </div>
 
         <div>
-          <span className="card-label">AI OUTLOOK</span>
+          <span className="card-label">MODEL OUTLOOK</span>
           <h2>Market assessment</h2>
         </div>
       </div>
@@ -74,15 +75,19 @@ export function AIOutlook() {
       <div className="ai-reason">
         <Sparkles size={15} />
 
-        <p>
-          {insight.explanation}
-        </p>
+        <p>{insight.explanation}</p>
       </div>
 
-      <button className="ai-details">
-        View AI reasoning
+      <button className="ai-details" onClick={() => setShowUnavailable(!showUnavailable)}>
+        {showUnavailable ? "Hide AI status" : "View AI reasoning"}
         <ChevronRight size={15} />
       </button>
+
+      {showUnavailable ? (
+        <p className="ai-unavailable-message" role="status">
+          AI-generated explanations are not enabled yet. This outlook is calculated from live market data using the rule-based signal service.
+        </p>
+      ) : null}
     </section>
   );
 }

@@ -1,7 +1,8 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
+from ...providers.yahoo_finance import YahooFinanceError
 from ...schemas.markets import MarketOverviewResponse
 from ...services.market_service import MarketService
 
@@ -13,4 +14,7 @@ market_service = MarketService()
 def get_market_overview(
     exchange: Annotated[str, Query(pattern="^(NSE|BSE)$")] = "NSE",
 ) -> MarketOverviewResponse:
-    return market_service.get_overview(exchange)
+    try:
+        return market_service.get_overview(exchange)
+    except YahooFinanceError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error

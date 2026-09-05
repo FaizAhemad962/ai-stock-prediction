@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { getPreferences, updatePreferences } from "../../services/api";
+import { changePassword, getCurrentUser, getPreferences, getPrivacy, revokeOtherSessions, updateCurrentUser, updatePreferences, updatePrivacy } from "../../services/api";
 
 type Preferences = {
   theme: "dark" | "system";
@@ -29,6 +29,12 @@ type Preferences = {
   market_region: string;
   timezone: string;
   ai_frequency_minutes: number;
+};
+
+type Account = {
+  id: string;
+  name: string;
+  email: string;
 };
 
 function readStoredBoolean(key: string, fallback: boolean) {
@@ -80,8 +86,27 @@ export function Settings() {
   const [actionMessage, setActionMessage] = useState("");
   const [activeSection, setActiveSection] = useState(readHashSection);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const [account, setAccount] = useState<Account>({ id: "", name: "Investor", email: "" });
+  const [profileName, setProfileName] = useState("Investor");
+  const [profileEmail, setProfileEmail] = useState("");
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [marketRegion, setMarketRegion] = useState("India");
+  const [timezone, setTimezone] = useState("Asia/Kolkata");
+  const [aiFrequency, setAiFrequency] = useState(15);
+  const [securityPanel, setSecurityPanel] = useState<"password" | "privacy" | "devices" | null>(null);
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [privacyAnalytics, setPrivacyAnalytics] = useState(true);
+  const [privacyPersonalization, setPrivacyPersonalization] = useState(true);
 
   useEffect(() => {
+    getCurrentUser<Account>()
+      .then((currentUser) => {
+        setAccount(currentUser);
+        setProfileName(currentUser.name);
+        setProfileEmail(currentUser.email);
+      })
+      .catch(() => undefined);
+
     getPreferences<Preferences>()
       .then((preferences) => {
         setNotifications(preferences.notifications);
@@ -90,13 +115,27 @@ export function Settings() {
         setAiAlerts(preferences.ai_alerts);
         setCompactMode(preferences.compact_mode);
         setTheme(preferences.theme);
+        setMarketRegion(preferences.market_region);
+        setTimezone(preferences.timezone);
+        setAiFrequency(preferences.ai_frequency_minutes);
         setPreferencesLoaded(true);
       })
       .catch(() => {
         setPreferencesLoaded(true);
         setActionMessage("Using local preferences while the backend is unavailable.");
       });
+
+    getPrivacy<{ analytics: boolean; personalization: boolean }>()
+      .then((privacy) => {
+        setPrivacyAnalytics(privacy.analytics);
+        setPrivacyPersonalization(privacy.personalization);
+      })
+      .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    void updatePrivacy({ analytics: privacyAnalytics, personalization: privacyPersonalization }).catch(() => undefined);
+  }, [privacyAnalytics, privacyPersonalization]);
 
   useEffect(() => {
     const settings = {
@@ -123,11 +162,11 @@ export function Settings() {
       price_alerts: priceAlerts,
       news_alerts: newsAlerts,
       ai_alerts: aiAlerts,
-      market_region: "India",
-      timezone: "Asia/Kolkata",
-      ai_frequency_minutes: 15,
+      market_region: marketRegion,
+      timezone,
+      ai_frequency_minutes: aiFrequency,
     }).catch(() => undefined);
-  }, [aiAlerts, compactMode, newsAlerts, notifications, preferencesLoaded, priceAlerts, theme]);
+  }, [aiAlerts, compactMode, marketRegion, newsAlerts, notifications, preferencesLoaded, priceAlerts, theme, timezone, aiFrequency]);
 
   useEffect(() => {
     const section = location.hash.replace("#settings-", "");
@@ -142,8 +181,24 @@ export function Settings() {
     });
   }, [location.hash]);
 
-  const handleDeferredAction = (label: string) => {
-    setActionMessage(`${label} will be available after authentication is connected.`);
+  const handlePasswordSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    void changePassword({ current_password: String(form.get("current_password")), new_password: String(form.get("new_password")) })
+      .then(() => setPasswordMessage("Password updated"))
+      .catch((requestError: Error) => setPasswordMessage(requestError.message));
+  };
+
+  const saveProfile = () => {
+    void updateCurrentUser<Account>({ name: profileName.trim(), email: profileEmail.trim() })
+      .then((updatedAccount) => {
+        setAccount(updatedAccount);
+        setProfileName(updatedAccount.name);
+        setProfileEmail(updatedAccount.email);
+        setEditingProfile(false);
+        setActionMessage("Profile updated");
+      })
+      .catch(() => setActionMessage("Profile could not be updated"));
   };
 
   const navigateToSection = (section: string) => {
@@ -181,8 +236,8 @@ export function Settings() {
             </div>
 
             <div>
-              <strong>Investor</strong>
-              <span>Personal account</span>
+              <strong>{account.name}</strong>
+              <span>{account.email || "Personal account"}</span>
             </div>
           </div>
 
@@ -261,10 +316,19 @@ export function Settings() {
                   </span>
                 </div>
 
-                <button className="settings-action" onClick={() => handleDeferredAction("Profile editing")}>
-                  Edit
-                  <ChevronRight size={12} />
-                </button>
+                {editingProfile ? (
+                  <div className="settings-inline-form">
+                    <input aria-label="Profile name" value={profileName} onChange={(event) => setProfileName(event.target.value)} />
+                    <input aria-label="Profile email" type="email" value={profileEmail} onChange={(event) => setProfileEmail(event.target.value)} />
+                    <button className="settings-action" onClick={saveProfile} disabled={!profileName.trim() || !profileEmail.trim()}>Save</button>
+                    <button className="settings-action" onClick={() => setEditingProfile(false)}>Cancel</button>
+                  </div>
+                ) : (
+                  <button className="settings-action" onClick={() => setEditingProfile(true)}>
+                    Edit
+                    <ChevronRight size={12} />
+                  </button>
+                )}
               </div>
 
               <div className="settings-row">
@@ -274,13 +338,14 @@ export function Settings() {
 
                 <div className="settings-row-content">
                   <strong>Market region</strong>
-                  <span>India · NSE & BSE</span>
+                  <span>{marketRegion} · NSE &amp; BSE</span>
                 </div>
 
-                <button className="settings-action" onClick={() => handleDeferredAction("Market region changes")}>
-                  Change
-                  <ChevronRight size={12} />
-                </button>
+                <select aria-label="Market region" value={marketRegion} onChange={(event) => setMarketRegion(event.target.value)}>
+                  <option value="India">India</option>
+                  <option value="United States">United States</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                </select>
               </div>
 
               <div className="settings-row">
@@ -290,13 +355,14 @@ export function Settings() {
 
                 <div className="settings-row-content">
                   <strong>Timezone</strong>
-                  <span>Asia/Kolkata · IST</span>
+                  <span>{timezone}</span>
                 </div>
 
-                <button className="settings-action" onClick={() => handleDeferredAction("Timezone changes")}>
-                  Change
-                  <ChevronRight size={12} />
-                </button>
+                <select aria-label="Timezone" value={timezone} onChange={(event) => setTimezone(event.target.value)}>
+                  <option value="Asia/Kolkata">Asia/Kolkata · IST</option>
+                  <option value="UTC">UTC</option>
+                  <option value="America/New_York">America/New_York · ET</option>
+                </select>
               </div>
             </div>
           </section>
@@ -430,7 +496,7 @@ export function Settings() {
                   </span>
                 </div>
 
-                <button className="settings-action" onClick={() => handleDeferredAction("Account security") }>
+                <button className="settings-action" onClick={() => setSecurityPanel(securityPanel === "password" ? null : "password") }>
                   Manage
                   <ChevronRight size={12} />
                 </button>
@@ -448,7 +514,7 @@ export function Settings() {
                   </span>
                 </div>
 
-                <button className="settings-action" onClick={() => handleDeferredAction("Privacy controls") }>
+                <button className="settings-action" onClick={() => setSecurityPanel(securityPanel === "privacy" ? null : "privacy") }>
                   Review
                   <ChevronRight size={12} />
                 </button>
@@ -464,11 +530,34 @@ export function Settings() {
                   <span>2 devices currently connected.</span>
                 </div>
 
-                <button className="settings-action" onClick={() => handleDeferredAction("Active device management") }>
+                <button className="settings-action" onClick={() => setSecurityPanel(securityPanel === "devices" ? null : "devices") }>
                   View
                   <ChevronRight size={12} />
                 </button>
               </div>
+
+              {securityPanel === "password" ? (
+                <form className="settings-inline-form" onSubmit={handlePasswordSubmit}>
+                  <input aria-label="Current password" name="current_password" type="password" placeholder="Current password" minLength={8} required />
+                  <input aria-label="New password" name="new_password" type="password" placeholder="New password" minLength={8} required />
+                  <button className="settings-action" type="submit">Request change</button>
+                  {passwordMessage ? <span role="status">{passwordMessage}</span> : null}
+                </form>
+              ) : null}
+
+              {securityPanel === "privacy" ? (
+                <div className="settings-inline-form">
+                  <ToggleRow icon={<Eye size={14} />} title="Usage analytics" description="Help improve product performance." enabled={privacyAnalytics} onToggle={() => setPrivacyAnalytics(!privacyAnalytics)} />
+                  <ToggleRow icon={<Shield size={14} />} title="Personalized insights" description="Use preferences to tailor market signals." enabled={privacyPersonalization} onToggle={() => setPrivacyPersonalization(!privacyPersonalization)} />
+                </div>
+              ) : null}
+
+              {securityPanel === "devices" ? (
+                <div className="settings-inline-form" role="status">
+                  <span>Current browser session</span>
+                  <button className="settings-action" type="button" onClick={() => void revokeOtherSessions().then(() => setActionMessage("Other sessions revoked")).catch((requestError: Error) => setActionMessage(requestError.message))}>Revoke other sessions</button>
+                </div>
+              ) : null}
             </div>
           </section>
 
@@ -489,14 +578,15 @@ export function Settings() {
                 <div className="settings-row-content">
                   <strong>AI analysis frequency</strong>
                   <span>
-                    Analysis updates every 15 minutes.
+                    Analysis updates every {aiFrequency} minutes.
                   </span>
                 </div>
 
-                <button className="settings-action" onClick={() => handleDeferredAction("AI analysis frequency") }>
-                  Change
-                  <ChevronRight size={12} />
-                </button>
+                <select aria-label="AI analysis frequency" value={aiFrequency} onChange={(event) => setAiFrequency(Number(event.target.value))}>
+                  <option value={15}>15 minutes</option>
+                  <option value={30}>30 minutes</option>
+                  <option value={60}>60 minutes</option>
+                </select>
               </div>
 
               <div className="settings-row">

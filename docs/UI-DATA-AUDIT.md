@@ -2,7 +2,7 @@
 
 ## Audit date
 
-2026-09-03
+2026-09-05
 
 ## Scope
 
@@ -12,19 +12,20 @@ This audit checks every current React page and reusable component for hard-coded
 
 | Category | Status |
 | --- | --- |
-| Backend mock endpoints | Present for the main UI domains |
+| Backend provider endpoints | Live market, stock, history, technical, news, and rule-based prediction routes are present |
 | Frontend API client | Present in `src/services/api.ts` |
 | Main quote, market, news, watchlist, portfolio, settings, auth, notification, and insights calls | Bound to the API client |
 | Dashboard price chart | History endpoint is called; chart geometry is generated from returned points |
 | Dashboard AI Outlook | Insights endpoint is called |
-| AI Insights page | Expanded Insights endpoint supplies metrics, signals, factors, risks, news signals, and analysis |
-| All displayed UI values are API-backed | Not yet; remaining gaps are documented below |
-| Real external provider data | Not yet |
+| AI Insights page | Insights endpoint supplies live-data-derived metrics, signals, factors, risks, news signals, and analysis |
+| Public Stock Details prediction | Prediction endpoint supplies current price, outlook, confidence, uncertainty, summary, and risks without login |
+| All displayed UI values are API-backed | Not yet; fixed featured-stock and portfolio presentation defaults remain |
+| Real external provider data | Yes for market, stock, history, technical, news, and rule-based prediction flows |
 | Database-backed user data | Not yet |
 
 ## API-Backed UI Surfaces
 
-These surfaces currently call `src/services/api.ts` and receive data from the FastAPI mock endpoints:
+These surfaces currently call `src/services/api.ts` and receive data from the FastAPI endpoints. Market-data endpoints use the server-side Yahoo Finance adapter; user-owned endpoints remain development-state until persistence is added:
 
 - Markets overview: `getMarketOverview()`
 - Dashboard market status: `getDashboard()`
@@ -74,8 +75,8 @@ Status: Partially bound.
 - `getStockHistory("SUZLON", selectedRange)` is called.
 - The SVG line is generated from returned price points.
 - `SUZLON` and `Suzlon Energy` are hard-coded in the component.
-- The chart footer labels `May 2026`, `Jun 2026`, `Jul 2026`, and `Aug 2026` are hard-coded and do not come from API timestamps.
-- The endpoint currently returns the same mock points for every range, so range buttons make a request but do not yet produce distinct mock datasets.
+- Chart footer labels are generated from API timestamps.
+- The endpoint now returns live range-specific points; the chart still lacks volume, tooltips, and a freshness label.
 - The chart does not yet show volume, tooltip values, or a data freshness label.
 
 Required follow-up:
@@ -121,7 +122,7 @@ Required follow-up:
 
 File: `src/pages/AIInsights/AIInsights.tsx`
 
-Status: API-backed for the current mock phase.
+Status: API-backed with live-data-derived rule-based signals; AI-generated explanations are not enabled.
 
 - The page requests the expanded `/api/insights` response through `getInsights()`.
 - Signal card names, prices, changes, outlook, and confidence come from the backend response.
@@ -131,7 +132,7 @@ Status: API-backed for the current mock phase.
 
 Required follow-up:
 
-- Replace the mock Insights provider with a validated prediction and AI service.
+- Prediction evaluation is now available through the backend; calibration, monitoring, and AI explanation service remain pending.
 - Add request retry and freshness handling.
 - Keep UI labels such as “Overall sentiment” and “Confidence” static; those are presentation labels, not domain data.
 
@@ -142,10 +143,10 @@ File: `src/pages/StockDetails/StockDetails.tsx`
 Status: Partially bound.
 
 - Quote, history, technicals, and related news are requested from APIs.
-- Key statistics still come from the static `mockStockDetail` object.
-- The AI outlook, confidence, explanation, technical momentum, sector momentum, and risk level are hard-coded.
+- Some secondary statistics still come from the static `mockStockDetail` object.
+- Prediction outlook, confidence, explanation, and risks come from the live-data-derived prediction endpoint; some presentation labels remain static.
 - The selected chart labels and some chart geometry remain static.
-- `mockStockDetail` is not keyed by symbol, so non-SUZLON routes can display Suzlon detail data.
+- `mockStockDetail` remains a legacy source for secondary fields and is not keyed by symbol.
 
 Required follow-up:
 
@@ -162,15 +163,14 @@ Status: Partially bound.
 
 - Holdings are fetched through `getPortfolio()`.
 - Holdings rows are derived from API data.
-- Total portfolio value, today P&L, overall P&L, allocation percentages, allocation colors, portfolio chart geometry, and chart labels remain hard-coded.
-- `mockHoldings` is still used as an initial state fallback.
-- Portfolio has no backend mutation endpoint for adding/editing/removing holdings.
+- Allocation percentages and stock count are derived from API holdings; portfolio chart geometry and performance labels remain static until a performance-history endpoint exists.
+- Portfolio period controls and the Manage action now respond in the UI; add/remove holding API contracts are implemented and require the approved persistence store.
 
 Required follow-up:
 
-- Return summary totals, allocation, and performance history from `/api/portfolio`.
+- Return summary totals, allocation, and performance history from `/api/portfolio` once portfolio persistence is implemented.
 - Remove the page-local allocation array.
-- Add portfolio mutation contracts only when the UI action requirements are defined.
+- Activate persistence and add performance-history data for the portfolio period controls.
 - Keep a clearly labeled loading state rather than showing stale mock holdings as if they were API data.
 
 ### 8. Watchlist Page
@@ -180,9 +180,9 @@ File: `src/pages/Watchlist/Watchlist.tsx`
 Status: Partially bound.
 
 - Watchlist symbols are loaded and mutated through the API.
-- Stock names, prices, and changes are derived from centralized frontend `mockStocks`.
-- AI signal mapping remains page-local.
-- “Add stock” automatically adds the next available mock symbol rather than allowing a stock selected by the user.
+- Stock names, prices, and changes are derived from market API responses.
+- Signals are derived from live quote movement.
+- Add stock now searches the backend stock API before adding a selected symbol.
 
 Required follow-up:
 
@@ -198,14 +198,14 @@ Status: Mostly bound.
 
 - News list, search query, category, and sentiment filters call `getNews()`.
 - Articles and related symbols come from the API response.
-- Article count `128`, trending topic names/counts, and the sentiment summary explanation remain hard-coded.
-- Publisher URL behavior is currently represented by mock source URLs in `NewsCard`.
+- Article count and sentiment score are derived from the returned articles, and pagination uses the API page/total metadata; trending topics remain pending.
+- Read actions use article URLs returned by the provider.
 
 Required follow-up:
 
 - Return summary counts and trending topics from the News API.
 - Return article-specific URLs from the provider response.
-- Add pagination metadata to the UI.
+- Add backend-provided trending topics when the provider contract supports them.
 
 ### 10. Settings Page
 
@@ -215,14 +215,29 @@ Status: Partially bound.
 
 - Notification, compact mode, and theme values load and update through the preferences API.
 - Browser storage remains as a fallback.
-- Market region, timezone, AI analysis frequency, active devices, and account/security values are static or deferred feedback.
-- The page sends fixed values for market region, timezone, and AI frequency on every preference update.
+- Market region, timezone, and AI analysis frequency now have working controls and are sent through the preferences API.
+- Password, privacy, and active-device panels call explicit account-service contracts; password/session operations remain unavailable until PostgreSQL is activated.
 
 Required follow-up:
 
-- Add actual selectors/inputs for region, timezone, and AI frequency.
-- Add typed account, security, privacy, and session endpoints.
+- Add backend persistence and validation for region, timezone, and AI frequency in every environment.
+- Activate and harden the account, security, privacy, and session endpoints against the production database.
 - Replace browser-local persistence after authenticated sessions exist.
+
+### 10a. Profile and Account Checklist
+
+The Profile menu currently opens Settings, but the account surface is not complete. These items are pending before Profile can be considered finished:
+
+- Load the signed-in user's name, email, avatar, and account status in Header, Sidebar, and Settings.
+- Implement editable name and email fields with validation, save, cancel, and success/error feedback.
+- Add password change with current-password verification, confirmation, and session invalidation rules.
+- Add real logout state handling and redirect behavior for expired or revoked sessions.
+- Add active-session/device listing, revoke-one-session, and revoke-all-other-sessions actions.
+- Add privacy controls for analytics, personalization, and data retention.
+- Add account export and account deletion flows with confirmation and backend status feedback.
+- Add region, timezone, and AI-frequency controls that persist through the preferences contract.
+- Add profile avatar upload or a deliberate initials/avatar fallback based on the user record.
+- Add authenticated route behavior so account-owned screens explain when the user is signed out.
 
 ### 11. Header and Sidebar
 
@@ -234,7 +249,7 @@ Status: Mixed.
 - Notification menu uses backend notification records.
 - Exchange selection `NSE`/`BSE` is local state and is not passed to all data requests.
 - Sidebar navigation labels and menu structure are intentionally static UI configuration.
-- Logout calls the mock logout endpoint, but the backend does not invalidate a real session yet.
+- Logout currently depends on the staged authentication contract; the UI needs expired-session and revoked-session handling.
 
 Required follow-up:
 
@@ -258,6 +273,6 @@ These are not acceptable as final domain data:
 
 ## Final Conclusion
 
-The application is not fully free of hard-coded domain content yet. The main API binding exists and is working, but the Dashboard AI/portfolio summaries, Stock Details statistics and analysis, News summary widgets, Watchlist AI signals, and chart labels still need API-backed response fields.
+The application is not fully free of hard-coded domain content yet. The main API binding exists and is working, but the Dashboard AI/portfolio summaries, Stock Details statistics and analysis, News summary widgets, Watchlist signals, and chart labels still need API-backed response fields. Profile and Settings also require a complete account workflow.
 
-The correct next step is not to replace every static string. It is to extend the relevant mock API response schemas first, move remaining domain records into the backend mock repository, then update `src/services/api.ts` and the affected UI components to consume those fields.
+The next product step is to finish the UI contracts and workflows first: complete Profile/Settings, portfolio actions, chart metadata, news summaries, and account states. The PostgreSQL schema and repository are staged under `backend/sql/` and `backend/app/repositories/`, but database activation should wait until the full contract and UI behavior are approved.

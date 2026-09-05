@@ -39,7 +39,22 @@ class AuthRequest(BaseModel):
 class RegisterRequest(AuthRequest):
     name: str = Field(min_length=1)
 
+class PasswordChangeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    current_password: str = Field(min_length=8)
+    new_password: str = Field(min_length=8)
+
+class SessionInfo(BaseModel):
+    token_hint: str
+    expires_at: str
+    current: bool = False
+
+class PrivacyPreferences(BaseModel):
+    analytics: bool = True
+    personalization: bool = True
+
 class AuthResponse(BaseModel):
     user: User
     authenticated: bool = True
     message: str
+    token: str

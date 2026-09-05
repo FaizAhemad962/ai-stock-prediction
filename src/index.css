@@ -702,6 +702,17 @@ kbd {
   opacity: 0.4;
 }
 
+.ai-unavailable-message {
+  margin: 12px 0 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(243, 184, 75, 0.24);
+  border-radius: 7px;
+  background: rgba(243, 184, 75, 0.06);
+  color: var(--amber);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
 .auth-panel {
   width: min(100%, 430px);
   padding: 30px;
@@ -2932,7 +2943,7 @@ input:focus-visible {
   font-size: 8px;
 }
 
-.mock-data-note {
+.data-note {
   margin-top: 13px;
   color: var(--muted);
   text-align: center;

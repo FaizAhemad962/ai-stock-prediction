@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -9,9 +9,9 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useWatchlist } from "../../components/WatchlistContext/useWatchlist";
-import { mockStocks } from "../../data/mockData";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { LoadingState } from "../../components/ui/LoadingState";
+import { searchStocks } from "../../services/api";
 
 type Stock = {
   symbol: string;
@@ -22,14 +22,7 @@ type Stock = {
   signal: "Bullish" | "Positive" | "Neutral" | "Caution";
 };
 
-const signalBySymbol: Record<string, Stock["signal"]> = {
-  SUZLON: "Bullish",
-  RELIANCE: "Positive",
-  TCS: "Neutral",
-  INFY: "Caution",
-  TATASTEEL: "Bullish",
-  HDFCBANK: "Positive",
-};
+type SearchStock = Awaited<ReturnType<typeof searchStocks>>[number];
 
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -37,19 +30,64 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 2,
 });
 
-const initialStocks: Stock[] = mockStocks.map((stock) => ({
-  symbol: stock.symbol,
-  name: stock.name,
-  price: currencyFormatter.format(stock.price),
-  change: `${stock.changePercent >= 0 ? "+" : ""}${stock.changePercent.toFixed(2)}%`,
-  changeValue: `${stock.change >= 0 ? "+" : "-"}${currencyFormatter.format(Math.abs(stock.change))}`,
-  signal: signalBySymbol[stock.symbol] ?? "Neutral",
-}));
-
 export function Watchlist() {
   const { symbols, isLoading, toggleWatchlist } = useWatchlist();
   const [search, setSearch] = useState("");
-  const stocks = initialStocks.filter((stock) => symbols.includes(stock.symbol));
+  const [addQuery, setAddQuery] = useState("");
+  const [addResults, setAddResults] = useState<SearchStock[]>([]);
+  const [addMessage, setAddMessage] = useState("");
+  const [catalog, setCatalog] = useState<Record<string, Stock>>({});
+
+  useEffect(() => {
+    if (symbols.length === 0) {
+      return;
+    }
+
+    let mounted = true;
+
+    Promise.all(
+      symbols.map((symbol) =>
+        searchStocks(symbol)
+          .then((results) => results[0] ?? null)
+          .catch(() => null),
+      ),
+    )
+      .then((results) => {
+        if (!mounted) return;
+
+        const nextCatalog: Record<string, Stock> = {};
+
+        for (const stock of results) {
+          if (!stock) continue;
+          nextCatalog[stock.symbol] = {
+            symbol: stock.symbol,
+            name: stock.name,
+            price: currencyFormatter.format(stock.price),
+            change: `${stock.changePercent >= 0 ? "+" : ""}${stock.changePercent.toFixed(2)}%`,
+            changeValue: `${stock.change >= 0 ? "+" : "-"}${currencyFormatter.format(Math.abs(stock.change))}`,
+            signal: stock.changePercent >= 2 ? "Bullish" : stock.changePercent >= 0 ? "Positive" : stock.changePercent > -1 ? "Neutral" : "Caution",
+          };
+        }
+
+        setCatalog(nextCatalog);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      mounted = false;
+    };
+  }, [symbols]);
+
+  const stocks = symbols
+    .map((symbol) => catalog[symbol] ?? {
+      symbol,
+      name: symbol,
+      price: "—",
+      change: "—",
+      changeValue: "—",
+      signal: "Neutral" as const,
+    })
+    .filter((stock) => stock.name !== "");
 
   const filteredStocks = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -69,12 +107,14 @@ export function Watchlist() {
     return <LoadingState className="watchlist-page" label="Loading watchlist" />;
   }
 
-  const addStock = () => {
-    const nextStock = initialStocks.find((stock) => !symbols.includes(stock.symbol));
-
-    if (nextStock) {
-      toggleWatchlist(nextStock.symbol);
-    }
+  const findStocksToAdd = () => {
+    if (!addQuery.trim()) return;
+    void searchStocks(addQuery.trim())
+      .then((results) => {
+        setAddResults(results.filter((stock) => !symbols.includes(stock.symbol)));
+        setAddMessage(results.length === 0 ? "No matching stocks found" : "");
+      })
+      .catch(() => setAddMessage("Stock search is unavailable"));
   };
 
   return (
@@ -90,7 +130,7 @@ export function Watchlist() {
           </p>
         </div>
 
-        <button className="primary-button" onClick={addStock}>
+        <button className="primary-button" onClick={findStocksToAdd}>
           <Plus size={14} />
           Add stock
         </button>
@@ -136,6 +176,17 @@ export function Watchlist() {
       </section>
 
       <section className="watchlist-card ui-card">
+        {addQuery ? (
+          <div className="watchlist-add-results" role="status">
+            {addResults.map((stock) => (
+              <button key={stock.symbol} onClick={() => { toggleWatchlist(stock.symbol); setAddQuery(""); setAddResults([]); }}>
+                {stock.symbol} · {stock.name}
+              </button>
+            ))}
+            {addMessage ? <span>{addMessage}</span> : null}
+          </div>
+        ) : null}
+
         <div className="watchlist-toolbar">
           <div className="watchlist-title">
             <Star size={15} />
@@ -152,6 +203,14 @@ export function Watchlist() {
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
+
+          <input
+            aria-label="Find a stock to add"
+            placeholder="Find stock to add..."
+            value={addQuery}
+            onChange={(event) => setAddQuery(event.target.value)}
+            onKeyDown={(event) => { if (event.key === "Enter") findStocksToAdd(); }}
+          />
         </div>
 
         {filteredStocks.length > 0 ? (
@@ -239,8 +298,8 @@ export function Watchlist() {
         )}
       </section>
 
-      <div className="mock-data-note">
-        Watchlist data is currently stored locally for UI development.
+      <div className="data-note">
+        Watchlist symbols and quote details are loaded through the account and market APIs.
       </div>
     </div>
   );

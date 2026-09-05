@@ -7,20 +7,10 @@ export type NewsCardItem = {
   publishedAt: string;
   title: string;
   summary: string;
+  url?: string;
   sentiment: "Positive" | "Neutral" | "Negative";
   impact: "High" | "Medium" | "Low";
   stocks: string[];
-};
-
-const sourceUrls: Record<string, string> = {
-  "Economic Times": "https://economictimes.indiatimes.com",
-  Moneycontrol: "https://www.moneycontrol.com",
-  "Business Standard": "https://www.business-standard.com",
-  "CNBC TV18": "https://www.cnbctv18.com",
-  Reuters: "https://www.reuters.com",
-  Mint: "https://www.livemint.com",
-  "Financial Express": "https://www.financialexpress.com",
-  "NDTV Profit": "https://www.ndtvprofit.com",
 };
 
 type NewsCardProps = {
@@ -66,15 +56,17 @@ export function NewsCard({ item }: NewsCardProps) {
           {item.sentiment}
         </span>
 
-        <a
-          className="article-open-button"
-          href={sourceUrls[item.source]}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Read
-          <ExternalLink size={11} />
-        </a>
+        {item.url ? (
+          <a
+            className="article-open-button"
+            href={item.url}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Read
+            <ExternalLink size={11} />
+          </a>
+        ) : null}
       </div>
     </article>
   );

@@ -40,6 +40,11 @@ export function StockChart() {
       }).join(" ")
     : "";
   const areaPath = chartPath ? `${chartPath} L800 300 L0 300 Z` : "";
+  const chartLabels = points.length > 0
+    ? [points[0], points[Math.floor(points.length / 3)], points[Math.floor((points.length * 2) / 3)], points[points.length - 1]]
+        .filter((point, index, values) => point && values.findIndex((item) => item?.timestamp === point.timestamp) === index)
+        .map((point) => new Date(point.timestamp).toLocaleDateString("en-IN", { month: "short", year: "numeric" }))
+    : [];
 
   return (
     <section className="ui-card chart-card">
@@ -107,10 +112,7 @@ export function StockChart() {
       </div>
 
       <div className="chart-footer">
-        <span>May 2026</span>
-        <span>Jun 2026</span>
-        <span>Jul 2026</span>
-        <span>Aug 2026</span>
+        {chartLabels.map((label) => <span key={label}>{label}</span>)}
       </div>
     </section>
   );

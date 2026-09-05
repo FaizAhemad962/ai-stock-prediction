@@ -10,12 +10,12 @@ The frontend foundation is ready for backend work:
 
 - Vite + React + TypeScript application is in place.
 - Existing routes and `MainLayout` architecture are stable.
-- Mock data is centralized in `src/data/mockData.ts`.
+- Live market data is served by backend providers; frontend domain data is not maintained as a runtime mock catalog.
 - UI contracts are defined in `src/types/stock.ts`.
 - Login and Register screens exist as frontend flows.
 - Watchlist, profile, notification, exchange, and stock navigation flows are defined.
 - `npm run build` and `npm run lint` pass.
-- Backend foundation is implemented under `backend/` with FastAPI app setup, restricted CORS, `/health`, schemas, mock domain routes, and tests.
+- Backend is implemented under `backend/` with FastAPI app setup, restricted CORS, `/health`, typed schemas, live provider routes, development user routes, and tests.
 
 Before production release, complete a manual review at desktop, tablet, and 320px mobile widths.
 
@@ -34,11 +34,22 @@ Before production release, complete a manual review at desktop, tablet, and 320p
 - Invalid exchanges are rejected with HTTP 422.
 - Market overview uses typed response schemas.
 - Market data is separated into route, service, and provider layers.
-- A mock market provider is available for development.
-- Backend tests currently pass: `8 passed`.
-- The frontend API client in `src/services/api.ts` now binds Markets, Dashboard news, Stock Search, Stock Details, News, Watchlist, Portfolio, Settings preferences, Login/Register, AI Insights, and Header Notifications to the mock API surface.
-- Dashboard Stock Overview and Technical Indicators now also request their data through `src/services/api.ts`.
-- The mock API-to-UI binding milestone is complete; the remaining work is hardening, persistence, real providers, and production services.
+- Yahoo Finance market, stock history, technical, and news adapters are connected server-side.
+- Backend tests currently pass under the project validation workflow.
+- The frontend API client in `src/services/api.ts` binds the main UI workflows to the live provider-backed API surface.
+- The public prediction and insights flows derive rule-based signals from live quote, history, technical, and news inputs and do not require login.
+- Prediction evaluation is available through `GET /api/stocks/{symbol}/prediction/evaluation` and reports live historical directional accuracy for `rules-v1`.
+- The app has reached the live-market pre-AI milestone: the product shell, route flow, onboarding, dashboard, markets, news, stock details, rule-based insights, PostgreSQL repository, account operations, and portfolio mutations are implemented.
+
+### Remaining completion work
+
+The next milestones before production are:
+
+- Review remaining presentation-only defaults and provider reliability before production.
+- Define calibration thresholds and scheduled monitoring using the prediction evaluation response.
+- Run `python scripts/init_db.py` against the configured PostgreSQL environment.
+- Add real OpenAI explanation generation behind the backend and keep it server-side only.
+- Harden auth, session, and security flows before production release.
 
 ### Endpoint integration audit
 
@@ -50,33 +61,49 @@ Before production release, complete a manual review at desktop, tablet, and 320p
 | Stocks search | Bound | Header and Dashboard Stock Search. |
 | Stock quote/history/technicals | Bound | Stock Details, Stock Overview, and Technical Indicators. |
 | News list/stock news | Bound | News page, Dashboard, and Stock Details. |
-| News article detail | Contract ready | Current mock Read action opens the publisher URL; internal article detail can be added when the backend provides article-specific content. |
-| Watchlist | Bound | Watchlist context and Stock Details toggle. |
-| Portfolio | Bound | Portfolio holdings view. |
-| Notifications list/read | Bound | Header notification menu and read actions. |
-| User preferences | Bound | Settings preference load and update. |
-| User profile | Partially bound | Header uses `/api/auth/me`; profile edit UI is pending. |
+| News article detail | Provider URL | Current Read action opens the article-specific URL returned by the live news provider; internal article detail remains optional. |
+| Watchlist | PostgreSQL-backed | Watchlist context and Stock Details toggle; requires authenticated bearer session. |
+| Portfolio | PostgreSQL-backed | Portfolio holdings view; requires authenticated bearer session. |
+| Notifications list/read | PostgreSQL-backed | Header notification menu and read actions; requires authenticated bearer session. |
+| User preferences | PostgreSQL-backed | Settings preference load and update; requires authenticated bearer session. |
+| User profile | Bound | Header, Settings, and profile edit use authenticated account endpoints. |
 | Login/Register/Logout | Bound | Login, Register, and profile menu actions. |
 | Google OAuth start | Bound | Login and Register provider buttons. |
 | Google OAuth callback | Provider-driven | Called by the OAuth provider redirect, not directly by a React page. |
 | Prediction and Insights | Bound | AI Insights page and Stock Details AI contract. |
-| Session management | Contract ready | Required when real authentication and active-device UI are implemented. |
+| Session management | Bound | Password changes, session listing, and revoke-other-sessions contracts are implemented. |
 
-This is the complete mock endpoint audit. `Contract ready` means the backend route/schema exists for a future UI workflow; it is not counted as a missing API.
+This is the current endpoint audit. Development-state user routes are intentionally separated from live market-data routes until database and authentication work is complete.
+
+## Public Prediction Module
+
+The public prediction flow does not require authentication:
+
+```text
+GET /api/stocks/search?q=SUZLON
+GET /api/stocks/SUZLON
+GET /api/stocks/SUZLON/history?range=1M
+GET /api/stocks/SUZLON/technicals
+GET /api/news/stock/SUZLON
+GET /api/stocks/SUZLON/prediction
+GET /api/stocks/SUZLON/insights
+```
+
+The prediction response includes current price, currency, change, outlook, confidence, uncertainty, factors, risks, timestamp, model version, and stale-data status. Login is reserved for user-owned features such as Watchlist, Portfolio, Notifications, Settings, and saved history.
 
 ### Pending
 
-- Replace remaining visual-only mock sections, including chart SVG geometry, selected summary text, AI factors, and portfolio summary totals, with API response data where their backend resources are ready.
-- Replace `MockMarketProvider` with a real market-data provider.
+- Replace remaining visual-only defaults, including chart footer labels and portfolio allocation metadata, with API response data where backend resources are ready.
+- Add provider configuration, reliability controls, and monitoring for the live market-data adapter.
 - Add provider API configuration, timeout, retry, rate-limit, and stale-data handling.
 - Harden stock search, Stock Details, historical, and technical provider behavior with real data.
 - Add request cancellation, retry, and mutation feedback refinement in the frontend client.
 - Harden News mapping and sentiment processing with real provider data.
-- Add authenticated Watchlist, Portfolio, Notifications, and Settings persistence.
+- Run PostgreSQL schema initialization in development, staging, and production and verify the integration tests with `DATABASE_URL`.
 - Connect Login, Register, Google OAuth, sessions, and real logout.
-- Add prediction model service and evaluation.
+- Define scheduled model monitoring and calibration thresholds using the prediction evaluation response.
 - Add AI explanation service after prediction data is validated.
-- Add database migrations and repositories.
+- Add a versioned migration tool if schema evolution beyond the bootstrap schema is required.
 - Add production security, monitoring, and deployment configuration.
 
 ## UI-to-API Coverage Matrix
@@ -166,7 +193,7 @@ Verified endpoints:
 - `GET /api/markets/overview?exchange=NSE`
 - `GET /api/markets/overview?exchange=BSE`
 
-The next task is to replace mock providers with configured external provider adapters while keeping the same response schemas.
+The next task is to add provider configuration, reliability controls, and database-backed user state while keeping the same response schemas.
 
 - Create the Python backend separately from `src/`.
 - Add health endpoint: `GET /health`.
@@ -294,6 +321,8 @@ Requirements:
 - Profile, privacy, security, and active-device controls must be protected by authentication and authorization.
 
 ### 7. Prediction engine
+
+Status: mock public prediction contract complete. Replace the mock prediction provider with validated historical, technical, market, and news inputs before production use.
 
 The prediction service should consume structured data, not raw UI strings:
 

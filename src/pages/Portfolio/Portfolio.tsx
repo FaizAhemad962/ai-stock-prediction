@@ -8,10 +8,18 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getMockStock, mockPortfolio } from "../../data/mockData";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { LoadingState } from "../../components/ui/LoadingState";
-import { getPortfolio } from "../../services/api";
+import { addPortfolioHolding, getPortfolio, getPortfolioPerformance, getStock, removePortfolioHolding } from "../../services/api";
+
+const formatCurrency = (value: number) =>
+  `₹${Math.abs(value).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+
+const formatSignedCurrency = (value: number) =>
+  `${value >= 0 ? "+" : "-"}${formatCurrency(value)}`;
 
 type Holding = {
   symbol: string;
@@ -30,74 +38,56 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 2,
 });
 
-const mockHoldings: Holding[] = mockPortfolio.flatMap((holding) => {
-  const stock = getMockStock(holding.symbol);
-
-  if (!stock) {
-    return [];
-  }
-
-  const pnlValue = (holding.currentPrice - holding.averagePrice) * holding.quantity;
-  const pnlPercentageValue =
-    (pnlValue / (holding.averagePrice * holding.quantity)) * 100;
-
-  return [{
-    symbol: stock.symbol,
-    name: stock.name,
-    quantity: holding.quantity,
-    averagePrice: currencyFormatter.format(holding.averagePrice),
-    currentPrice: currencyFormatter.format(holding.currentPrice),
-    pnl: `${pnlValue >= 0 ? "+" : ""}${currencyFormatter.format(pnlValue)}`,
-    pnlPercentage: `${pnlPercentageValue >= 0 ? "+" : ""}${pnlPercentageValue.toFixed(2)}%`,
-    positive: pnlValue >= 0,
-  }];
-});
-
-const allocation = [
-  {
-    name: "SUZLON",
-    percentage: 34,
-    color: "#7187ff",
-  },
-  {
-    name: "RELIANCE",
-    percentage: 25,
-    color: "#35d399",
-  },
-  {
-    name: "TCS",
-    percentage: 18,
-    color: "#b58cff",
-  },
-  {
-    name: "INFY",
-    percentage: 11,
-    color: "#e5b75d",
-  },
-  {
-    name: "TATASTEEL",
-    percentage: 12,
-    color: "#ff7188",
-  },
-];
-
 export function Portfolio() {
-  const [portfolioHoldings, setPortfolioHoldings] = useState<Holding[]>(mockHoldings);
+  const [portfolioHoldings, setPortfolioHoldings] = useState<Holding[]>([]);
+  const [portfolioSummary, setPortfolioSummary] = useState({
+    totalValue: 0,
+    todayPnl: 0,
+    overallPnl: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedPeriod, setSelectedPeriod] = useState("1M");
+  const [portfolioMessage, setPortfolioMessage] = useState("");
+  const [manageOpen, setManageOpen] = useState(false);
+  const [holdingSymbol, setHoldingSymbol] = useState("");
+  const [holdingQuantity, setHoldingQuantity] = useState("");
+  const [holdingAveragePrice, setHoldingAveragePrice] = useState("");
+  const [mutationLoading, setMutationLoading] = useState(false);
+  const [performance, setPerformance] = useState<Array<{ timestamp: string; totalValue: number }>>([]);
 
   useEffect(() => {
     let mounted = true;
     getPortfolio()
-      .then((data) => {
+      .then(async (data) => {
         if (!mounted) return;
-        setPortfolioHoldings(data.holdings.flatMap((holding) => {
-          const stock = getMockStock(holding.symbol);
-          if (!stock) return [];
-          const pnl = (holding.currentPrice - holding.averagePrice) * holding.quantity;
-          const base = holding.averagePrice * holding.quantity;
-          return [{ symbol: stock.symbol, name: stock.name, quantity: holding.quantity, averagePrice: currencyFormatter.format(holding.averagePrice), currentPrice: currencyFormatter.format(holding.currentPrice), pnl: `${pnl >= 0 ? "+" : ""}${currencyFormatter.format(pnl)}`, pnlPercentage: `${pnl >= 0 ? "+" : ""}${((pnl / base) * 100).toFixed(2)}%`, positive: pnl >= 0 }];
-        }));
+
+        const nextHoldings = await Promise.all(
+          data.holdings.map(async (holding) => {
+            const stock = await getStock(holding.symbol).catch(() => null);
+            if (!stock) return null;
+
+            const pnl = (holding.currentPrice - holding.averagePrice) * holding.quantity;
+            const base = holding.averagePrice * holding.quantity;
+            return {
+              symbol: stock.symbol,
+              name: stock.name,
+              quantity: holding.quantity,
+              averagePrice: currencyFormatter.format(holding.averagePrice),
+              currentPrice: currencyFormatter.format(holding.currentPrice),
+              pnl: `${pnl >= 0 ? "+" : ""}${currencyFormatter.format(pnl)}`,
+              pnlPercentage: `${pnl >= 0 ? "+" : ""}${((pnl / base) * 100).toFixed(2)}%`,
+              positive: pnl >= 0,
+            } satisfies Holding;
+          }),
+        );
+
+        setPortfolioHoldings(nextHoldings.filter((holding): holding is Holding => holding !== null));
+        setPortfolioSummary({
+          totalValue: data.totalValue,
+          todayPnl: data.todayPnl,
+          overallPnl: data.overallPnl,
+        });
       })
       .catch((requestError: Error) => {
         if (mounted) setError(requestError.message);
@@ -105,11 +95,76 @@ export function Portfolio() {
       .finally(() => {
         if (mounted) setIsLoading(false);
       });
+    getPortfolioPerformance().then(setPerformance).catch(() => undefined);
     return () => { mounted = false; };
   }, []);
 
   if (isLoading) return <LoadingState className="portfolio-page" label="Loading portfolio" />;
   if (error) return <ErrorState className="portfolio-page" title="Portfolio unavailable" description={error} />;
+
+  const allocationColors = ["#7187ff", "#35d399", "#b58cff", "#e5b75d", "#ff7188"];
+  const allocationTotal = portfolioHoldings.reduce((total, holding) => total + holding.quantity, 0);
+  const allocation = portfolioHoldings.map((holding, index) => ({
+    name: holding.symbol,
+    percentage: allocationTotal ? Math.round((holding.quantity / allocationTotal) * 100) : 0,
+    color: allocationColors[index % allocationColors.length],
+  }));
+  const performancePath = performance.length > 1
+    ? (() => {
+      const values = performance.map((point) => point.totalValue);
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      return performance.map((point, index) => {
+        const x = (index / (performance.length - 1)) * 900;
+        const y = 220 - ((point.totalValue - min) / Math.max(max - min, 1)) * 155;
+        return `${index === 0 ? "M" : "L"}${x} ${y}`;
+      }).join(" ");
+    })()
+    : "";
+  const performanceArea = performancePath ? `${performancePath} L900 260 L0 260 Z` : "";
+
+  const refreshPortfolio = () => {
+    setIsLoading(true);
+    setError("");
+    return getPortfolio()
+      .then(async (data) => {
+        const nextHoldings = await Promise.all(data.holdings.map(async (holding) => {
+          const stock = await getStock(holding.symbol).catch(() => null);
+          if (!stock) return null;
+          const pnl = (holding.currentPrice - holding.averagePrice) * holding.quantity;
+          const base = holding.averagePrice * holding.quantity;
+          return { symbol: stock.symbol, name: stock.name, quantity: holding.quantity, averagePrice: currencyFormatter.format(holding.averagePrice), currentPrice: currencyFormatter.format(holding.currentPrice), pnl: `${pnl >= 0 ? "+" : ""}${currencyFormatter.format(pnl)}`, pnlPercentage: `${pnl >= 0 ? "+" : ""}${((pnl / base) * 100).toFixed(2)}%`, positive: pnl >= 0 } satisfies Holding;
+        }));
+        setPortfolioHoldings(nextHoldings.filter((holding): holding is Holding => holding !== null));
+        setPortfolioSummary({ totalValue: data.totalValue, todayPnl: data.todayPnl, overallPnl: data.overallPnl });
+      })
+      .catch((requestError: Error) => setError(requestError.message))
+      .finally(() => setIsLoading(false));
+  };
+
+  const submitHolding = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMutationLoading(true);
+    void addPortfolioHolding({ symbol: holdingSymbol.trim().toUpperCase(), quantity: Number(holdingQuantity), average_price: Number(holdingAveragePrice) })
+      .then(() => {
+        setPortfolioMessage("Holding saved");
+        setHoldingSymbol("");
+        setHoldingQuantity("");
+        setHoldingAveragePrice("");
+        setManageOpen(false);
+        return refreshPortfolio();
+      })
+      .catch((requestError: Error) => setPortfolioMessage(requestError.message))
+      .finally(() => setMutationLoading(false));
+  };
+
+  const removeHolding = (symbol: string) => {
+    setMutationLoading(true);
+    void removePortfolioHolding(symbol)
+      .then(() => { setPortfolioMessage(`${symbol} removed`); return refreshPortfolio(); })
+      .catch((requestError: Error) => setPortfolioMessage(requestError.message))
+      .finally(() => setMutationLoading(false));
+  };
 
   return (
     <div className="portfolio-page" data-tour="portfolio">
@@ -124,11 +179,21 @@ export function Portfolio() {
           </p>
         </div>
 
-        <button className="portfolio-action-button">
+        <button className="portfolio-action-button" onClick={() => setManageOpen(!manageOpen)}>
           <BriefcaseBusiness size={14} />
           Manage portfolio
         </button>
       </section>
+
+      {portfolioMessage ? <p className="settings-status" role="status">{portfolioMessage}</p> : null}
+      {manageOpen ? (
+        <form className="ui-card portfolio-manage-form" onSubmit={submitHolding}>
+          <input aria-label="Stock symbol" placeholder="Symbol e.g. INFY" value={holdingSymbol} onChange={(event) => setHoldingSymbol(event.target.value)} required />
+          <input aria-label="Quantity" type="number" min="1" placeholder="Quantity" value={holdingQuantity} onChange={(event) => setHoldingQuantity(event.target.value)} required />
+          <input aria-label="Average price" type="number" min="0.01" step="0.01" placeholder="Average price" value={holdingAveragePrice} onChange={(event) => setHoldingAveragePrice(event.target.value)} required />
+          <button className="primary-button" type="submit" disabled={mutationLoading}>{mutationLoading ? "Saving..." : "Save holding"}</button>
+        </form>
+      ) : null}
 
       <section className="portfolio-summary">
         <div className="ui-card portfolio-summary-card">
@@ -138,7 +203,7 @@ export function Portfolio() {
 
           <div>
             <span>Total portfolio value</span>
-            <strong>₹8,42,615</strong>
+            <strong>{currencyFormatter.format(portfolioSummary.totalValue)}</strong>
           </div>
 
           <small>Current value</small>
@@ -151,10 +216,16 @@ export function Portfolio() {
 
           <div>
             <span>Today's P&amp;L</span>
-            <strong className="positive">+₹8,421</strong>
+            <strong className={portfolioSummary.todayPnl >= 0 ? "positive" : "negative"}>
+              {formatSignedCurrency(portfolioSummary.todayPnl)}
+            </strong>
           </div>
 
-          <small className="positive">+1.01%</small>
+          <small className={portfolioSummary.todayPnl >= 0 ? "positive" : "negative"}>
+            {portfolioSummary.totalValue > 0
+              ? `${((portfolioSummary.todayPnl / portfolioSummary.totalValue) * 100).toFixed(2)}%`
+              : "0.00%"}
+          </small>
         </div>
 
         <div className="ui-card portfolio-summary-card">
@@ -164,10 +235,16 @@ export function Portfolio() {
 
           <div>
             <span>Overall P&amp;L</span>
-            <strong className="positive">+₹7,031</strong>
+            <strong className={portfolioSummary.overallPnl >= 0 ? "positive" : "negative"}>
+              {formatSignedCurrency(portfolioSummary.overallPnl)}
+            </strong>
           </div>
 
-          <small className="positive">+6.84%</small>
+          <small className={portfolioSummary.overallPnl >= 0 ? "positive" : "negative"}>
+            {portfolioSummary.totalValue > 0
+              ? `${((portfolioSummary.overallPnl / portfolioSummary.totalValue) * 100).toFixed(2)}%`
+              : "0.00%"}
+          </small>
         </div>
       </section>
 
@@ -180,10 +257,9 @@ export function Portfolio() {
             </div>
 
             <div className="portfolio-period">
-              <button className="active">1M</button>
-              <button>6M</button>
-              <button>1Y</button>
-              <button>ALL</button>
+              {["1M", "6M", "1Y", "ALL"].map((period) => (
+                <button key={period} className={selectedPeriod === period ? "active" : ""} onClick={() => setSelectedPeriod(period)}>{period}</button>
+              ))}
             </div>
           </div>
 
@@ -219,18 +295,8 @@ export function Portfolio() {
                 </linearGradient>
               </defs>
 
-              <path
-                d="M0 218 L75 210 L145 215 L220 190 L295 198 L370 166 L440 175 L515 143 L590 150 L665 120 L740 130 L815 86 L900 65 L900 260 L0 260 Z"
-                fill="url(#portfolioGradient)"
-              />
-
-              <path
-                d="M0 218 L75 210 L145 215 L220 190 L295 198 L370 166 L440 175 L515 143 L590 150 L665 120 L740 130 L815 86 L900 65"
-                fill="none"
-                stroke="#7187ff"
-                strokeWidth="3"
-                vectorEffect="non-scaling-stroke"
-              />
+              {performanceArea ? <path d={performanceArea} fill="url(#portfolioGradient)" /> : null}
+              {performancePath ? <path d={performancePath} fill="none" stroke="#7187ff" strokeWidth="3" vectorEffect="non-scaling-stroke" /> : null}
             </svg>
 
             <div className="portfolio-chart-labels">
@@ -256,7 +322,7 @@ export function Portfolio() {
           <div className="allocation-visual">
             <div className="allocation-ring">
               <div className="allocation-ring-center">
-                <strong>5</strong>
+                <strong>{portfolioHoldings.length}</strong>
                 <span>Stocks</span>
               </div>
             </div>
@@ -302,7 +368,7 @@ export function Portfolio() {
           </div>
 
           <div className="holdings-list">
-            {portfolioHoldings.map((holding) => (
+            {portfolioHoldings.length > 0 ? portfolioHoldings.map((holding) => (
               <div className="holding-row" key={holding.symbol}>
                 <Link
                   className="holding-stock stock-link"
@@ -346,14 +412,18 @@ export function Portfolio() {
                     <span>{holding.pnlPercentage}</span>
                   </div>
                 </div>
+
+                <button className="remove-stock-button" type="button" aria-label={`Remove ${holding.symbol}`} onClick={() => removeHolding(holding.symbol)} disabled={mutationLoading}>×</button>
               </div>
-            ))}
+            )) : (
+              <div className="portfolio-empty-state">No holdings are currently recorded for this account.</div>
+            )}
           </div>
         </div>
       </section>
 
       <div className="portfolio-note">
-        Portfolio values shown here are mock data for UI development.
+        Portfolio values are supplied by the account portfolio endpoint.
       </div>
     </div>
   );

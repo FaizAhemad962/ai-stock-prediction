@@ -86,7 +86,7 @@ export function AIInsights() {
 
         <div className="ai-status">
           <span className="ai-status-dot" />
-          AI engine ready
+          Rule-based signals ready · AI explanations pending
         </div>
       </section>
 

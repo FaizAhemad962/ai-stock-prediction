@@ -12,6 +12,25 @@ class Prediction(BaseModel):
     model_version: str
     as_of: datetime
 
+
+class PublicPredictionResponse(Prediction):
+    name: str
+    current_price: float
+    currency: str
+    change_percent: float
+    risks: list[str] = Field(default_factory=list)
+    data_as_of: datetime
+    is_stale: bool
+
+class PredictionEvaluationResponse(BaseModel):
+    symbol: str
+    model_version: str
+    evaluated_points: int
+    directional_accuracy: float
+    positive_predictions: int
+    negative_predictions: int
+    evaluated_at: datetime
+
 class InsightResponse(BaseModel):
     symbol: str
     prediction: Prediction

@@ -1,8 +1,12 @@
+import os
+
+import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.main import app
 
 client = TestClient(app)
+database_required = pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="DATABASE_URL is required for PostgreSQL integration tests")
 
 
 def test_stock_search_matches_company_name() -> None:
@@ -29,7 +33,8 @@ def test_news_stock_mapping() -> None:
     assert "SUZLON" in response.json()["items"][0]["symbols"]
 
 
-def test_mock_user_workflows() -> None:
+@database_required
+def test_postgres_user_workflows() -> None:
     add_response = client.post("/api/watchlist", json={"symbol": "INFY"})
     portfolio_response = client.get("/api/portfolio")
     preferences_response = client.patch(
@@ -44,7 +49,8 @@ def test_mock_user_workflows() -> None:
     assert preferences_response.json()["theme"] == "system"
 
 
-def test_mock_auth_and_insights() -> None:
+@database_required
+def test_postgres_auth_and_insights() -> None:
     login_response = client.post(
         "/api/auth/login",
         json={"email": "investor@example.com", "password": "password123"},
@@ -62,8 +68,37 @@ def test_insights_dashboard_contains_all_ui_sections() -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["market_score"] == 72
-    assert payload["positive_signals"] == 14
+    assert 0 <= payload["market_score"] <= 100
+    assert 0 <= payload["positive_signals"] <= len(payload["items"])
     assert payload["factors"]
     assert payload["risks"]
     assert payload["news_signals"]
+
+
+def test_public_prediction_contains_current_price_and_risks() -> None:
+    response = client.get("/api/stocks/SUZLON/prediction")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["current_price"] > 0
+    assert 0 <= payload["confidence"] <= 100
+    assert payload["uncertainty"] == 100 - payload["confidence"]
+    assert payload["risks"]
+    assert payload["is_stale"] is False
+
+
+def test_public_prediction_does_not_require_login() -> None:
+    response = client.get("/api/stocks/INFY/prediction")
+
+    assert response.status_code == 200
+    assert response.json()["symbol"] == "INFY"
+
+    def test_prediction_evaluation_returns_quality_metrics() -> None:
+        response = client.get("/api/stocks/SUZLON/prediction/evaluation")
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["symbol"] == "SUZLON"
+        assert payload["model_version"] == "rules-v1"
+        assert 0 <= payload["directional_accuracy"] <= 100
+        assert payload["evaluated_points"] >= 0

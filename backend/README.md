@@ -1,6 +1,6 @@
 # AI Stock Prediction Backend
 
-FastAPI backend for the AI Stock Prediction application. This service is intentionally provider-independent: market, news, authentication, prediction, and AI integrations should be added behind the documented service and provider boundaries.
+FastAPI backend for the AI Stock Prediction application. Market, stock, history, technical, news, and rule-based prediction data use server-side providers. User-owned data is persisted in PostgreSQL.
 
 ## Local setup
 
@@ -23,6 +23,22 @@ Both commands start the same application. The package-relative imports support e
 
 The API is available at `http://127.0.0.1:8000`.
 
+## PostgreSQL setup
+
+Set `DATABASE_URL` in `backend/.env` before using authentication or user-owned endpoints:
+
+```text
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/stock_prediction
+```
+
+Initialize the schema from the `backend` directory:
+
+```bash
+python scripts/init_db.py
+```
+
+Users, sessions, preferences, watchlists, portfolio holdings, and notifications are stored in PostgreSQL. The application does not seed or use in-memory user records.
+
 ## First endpoint
 
 ```text
@@ -38,9 +54,9 @@ GET /api/markets/overview?exchange=NSE
 GET /api/markets/overview?exchange=BSE
 ```
 
-The mock implementation returns typed data for the current UI contracts. External market providers will be added behind the provider boundary later.
+The endpoint returns typed data from the server-side Yahoo Finance adapter.
 
-## Mock endpoint inventory
+## Endpoint inventory
 
 | Area | Endpoints |
 | --- | --- |
@@ -55,7 +71,7 @@ The mock implementation returns typed data for the current UI contracts. Externa
 | Authentication | `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `GET /api/auth/google/start`, `GET /api/auth/google/callback` |
 | AI | `GET /api/insights`, `GET /api/stocks/{symbol}/prediction`, `GET /api/stocks/{symbol}/insights` |
 
-All endpoints currently use in-memory mock records. They are contracts and development fixtures, not production authentication, market data, persistence, prediction, or AI behavior. The React UI calls them through `src/services/api.ts`.
+Market and news endpoints use the live provider adapter. Authentication and user-owned endpoints require a PostgreSQL-backed bearer session. Prediction and insights are transparent rule-based signals; AI-generated explanations are not enabled. The React UI calls all endpoints through `src/services/api.ts`.
 
 Run tests from inside `backend` with:
 
@@ -70,7 +86,7 @@ backend/
   app/
     api/           FastAPI routers and route handlers
     core/          Settings and cross-cutting concerns
-    models/        Persistence models, added with the database phase
+    models/        Persistence models and schema definitions
     providers/     External market/news/AI adapters
     repositories/  Data access boundaries
     schemas/       Request and response contracts

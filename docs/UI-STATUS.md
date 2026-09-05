@@ -2,17 +2,17 @@
 
 ## Purpose
 
-This document is the current frontend source of truth for the AI Stock Prediction application. It records what is implemented, what remains as UI polish, and how the frontend is currently bound to the mock FastAPI contracts.
+This document is the current frontend source of truth for the AI Stock Prediction application. It records what is implemented, what remains as UI polish, and how the frontend is bound to the FastAPI contracts.
 
 The complete backend endpoint inventory and AI sequence are maintained in [docs/BACKEND-ROADMAP.md](BACKEND-ROADMAP.md). Use both documents together: this file describes UI behavior and the backend document describes the services required to power it.
 
 The detailed hard-coded data and API binding audit is maintained in [docs/UI-DATA-AUDIT.md](UI-DATA-AUDIT.md). Use it before marking a UI surface fully API-backed.
 
-The application uses Vite, React 19, TypeScript, React Router, lucide-react, and a typed frontend API client. The UI is connected to mock FastAPI endpoints; real provider data, database persistence, and production authentication are still pending.
+The application uses Vite, React 19, TypeScript, React Router, lucide-react, and a typed frontend API client. Market, stock, history, technical, news, and rule-based prediction data are provider-backed; database persistence, production authentication, and AI-generated explanations are still pending.
 
 ### Data boundary
 
-The current stock values are temporary mock data for UI development. They are centralized in `src/data/mockData.ts` and described by contracts in `src/types/stock.ts`; pages and components must consume those records rather than hard-coding stock values locally. When the Python backend is introduced, its responses should satisfy the same typed contracts so the UI does not need to be rewritten around a provider-specific format.
+The frontend consumes backend responses through the contracts in `src/types/stock.ts`. Live market data uses the server-side provider adapter, while user-owned data requires PostgreSQL-backed sessions and repositories.
 
 ## Structure and Style Contract
 
@@ -25,7 +25,7 @@ The existing architecture and visual language are approved foundations. Future w
 - Keep route-level screens under `src/pages/<PageName>/`.
 - Keep reusable UI under `src/components/<ComponentName>/`.
 - Keep shared layout code under `src/layouts/`.
-- Keep mock/static data under `src/data/` and shared contracts under `src/types/`.
+- Keep shared contracts under `src/types/`; domain data must come through backend APIs.
 - Add files only when they support an existing responsibility; do not reorganize the repository into a new architecture.
 - Reuse React Router primitives, existing components, and lucide-react icons before introducing alternatives.
 - Do not change public route names or navigation destinations as part of UI polish.
@@ -58,12 +58,12 @@ The existing architecture and visual language are approved foundations. Future w
 - Routes: implemented in `src/App.tsx`
 - Shared shell: `src/layouts/MainLayout/MainLayout.tsx`
 - Styling: primarily `src/index.css`
-- Data layer: typed mock records are available in `src/data/mockData.ts`
+- Data layer: the application uses the backend contract layer through `src/services/api.ts`; live market and news data are supplied by the server-side Yahoo Finance adapter.
 - Domain types: stock, chart, indicator, news, portfolio, and prediction contracts are available in `src/types/stock.ts`
-- Backend status: FastAPI foundation and complete mock API surface are working; frontend API client bindings cover the main data-bearing workflows and real provider integration is pending.
-- API audit: all core UI data and actions use `src/services/api.ts`; OAuth callback, health, article-detail, profile-edit, and session-management routes are correctly classified as operational or future contract workflows.
-- Data audit: main requests are API-backed, but Dashboard summaries, Stock Details analysis/statistics, News summary widgets, Watchlist signals, and some chart labels still contain mock or hard-coded domain values. See [docs/UI-DATA-AUDIT.md](UI-DATA-AUDIT.md).
-- Automated tests: no test script currently exists
+- Backend status: FastAPI routes for markets, stocks, history, technicals, news, and rule-based prediction use live provider data; user persistence and AI explanations remain pending.
+- API audit: the main UI workflows use `src/services/api.ts`, including market, stocks, news, watchlist, portfolio, settings, auth, prediction, and insights.
+- Data audit: market, stock, chart, technical, news, prediction, authentication, watchlist, portfolio, notifications, and preferences use backend APIs. User-owned flows require `DATABASE_URL` and the PostgreSQL schema.
+- Automated verification: `npm run build`, `npm run lint`, and backend tests pass in the current milestone.
 
 ### Validation status
 
@@ -72,7 +72,7 @@ The existing architecture and visual language are approved foundations. Future w
 | `npm run build` | Passing | Confirmed on 2026-09-03. |
 | `npm run lint` | Passing | Confirmed on 2026-09-03. |
 | Routes | Implemented | Includes dashboard routes, `/stock/:symbol`, `/login`, `/register`, and fallback redirects. |
-| API integration | Mock integration complete | Main UI data surfaces use `src/services/api.ts` and the mock FastAPI endpoints; real provider integration is pending. |
+| API integration | Live provider integration complete for market data | Main market, stock, chart, technical, news, and prediction surfaces use `src/services/api.ts`; user persistence and AI services remain pending. |
 
 ## What Is Good
 
@@ -107,10 +107,10 @@ The existing architecture and visual language are approved foundations. Future w
 
 - Sidebar links use `NavLink` and display active navigation state.
 - Markets gainers and losers navigate to `/stock/:symbol`.
-- Stock search filters mock results and navigates to stock details.
+- Stock search queries the live backend provider and navigates to stock details.
 - The root route redirects to Dashboard.
 - Dashboard already composes Stock Search, Stock Overview, Stock Chart, AI Outlook, Technical Indicators, and News.
-- Typed mock contracts now cover stocks, price history, indicators, news, portfolio holdings, and predictions.
+- Typed contracts cover stocks, price history, indicators, news, portfolio holdings, and predictions.
 - Mock values are centralized in `src/data/mockData.ts`; UI components should not define duplicate stock records or provider-specific data shapes.
 - Shared UI primitives now exist under `src/components/ui/` for cards, badges, section headers, stock rows, and common states.
 - Stock Details now resolves `:symbol` and displays a not-found state for unsupported symbols.
@@ -137,20 +137,21 @@ The existing architecture and visual language are approved foundations. Future w
 - News and Watchlist now use the shared `EmptyState` primitive for filtered and empty-list results.
 - Backend-dependent Settings actions now provide accessible deferred-action feedback instead of behaving like inactive buttons.
 - Settings category navigation now scrolls to visible Account, Notifications, Appearance, Privacy & Security, and Data & AI sections with active-state feedback.
-- Header Notifications now opens an in-place notification menu with mock alerts and a link to notification settings.
+- Header Notifications now opens an in-place notification menu backed by the current development notification endpoint.
 - Header Profile and the sidebar profile now open account menus with Account settings and Log out actions; the Sidebar no longer duplicates Settings as a separate navigation item.
 - Header exchange indicator now opens an NSE/BSE selector with the selected exchange visible.
 - Login and Register routes now provide email/password and Google provider entry points for the frontend flow.
-- AI Insights now receives its metrics, stock display values, factors, risks, news signals, and analysis copy from the expanded `/api/insights` mock response.
+- AI Insights now receives live-data-derived rule-based metrics, factors, risks, and prediction responses from `/api/insights`; AI-generated explanations are not enabled.
+- Stock Details now requests public prediction data without login and renders outlook, confidence, uncertainty, summary, and risk count.
 - A route-aware Product Tour now has dedicated targets for every Sidebar item, Profile/Settings, and the AI Insights page; it opens on first Dashboard visit and can be reopened from the Header Help control.
 
 ## What Is Missing or Incomplete
 
 ### Backend handoff status
 
-Working: FastAPI app, CORS, `/health`, typed schemas, mock APIs for Markets, Dashboard, Stocks, News, Watchlist, Portfolio, Notifications, Settings, Authentication, Predictions, and Insights, plus backend tests. The frontend API client binds Markets, Dashboard news/featured stock/technicals, Stock Search, Stock Details, News, Watchlist, Portfolio, Settings preferences, Login/Register, AI Insights, and Header Notifications to those endpoints.
+Working: FastAPI app, CORS, `/health`, typed schemas, live provider routes for Markets, Stocks, History, Technicals, News, Predictions, and Insights, plus development endpoints for Watchlist, Portfolio, Notifications, Settings, and Authentication. The frontend API client binds all of these UI workflows.
 
-Pending: real provider adapters, persistent database-backed user state, production authentication/OAuth, request cancellation and retry refinement, chart data visualization from returned history, complete per-symbol detail data, profile-edit and session-management UI, and production prediction/AI services. See [docs/BACKEND-ROADMAP.md](BACKEND-ROADMAP.md) for the complete endpoint inventory and integration audit.
+Pending: PostgreSQL activation for password/session/privacy operations and portfolio mutations, portfolio performance history, production OAuth, request cancellation and retry refinement, richer per-symbol detail data, prediction calibration/monitoring, and AI explanation services. The visible UI controls, API contracts, and prediction evaluation endpoint are now wired and responsive. See [docs/BACKEND-ROADMAP.md](BACKEND-ROADMAP.md) for the complete endpoint inventory and integration audit.
 
 ### Priority 1: shared UI primitives
 
@@ -169,7 +170,7 @@ The first migrations are complete in Stock Details and Markets. Continue migrati
 
 ### Priority 1: route-driven stock details
 
-`/stock/:symbol` now reads `useParams()` and resolves supported symbols from typed mock data. Unknown symbols show an explicit not-found state with a route back to Markets. Supporting data for all symbols used by Markets and other pages is still needed.
+`/stock/:symbol` now reads `useParams()` and resolves symbols through the live stock API. Unknown symbols show an explicit not-found state with a route back to Markets.
 
 ### Priority 1: cross-page navigation
 
@@ -206,11 +207,11 @@ The states should be reusable components, not one-off paragraphs embedded in eac
 
 Present: welcome area, market status, search, stock overview, chart shell, AI outlook, technical overview, and compact latest-news panel.
 
-Remaining: chart rendering from returned history, volume visualization, working timeframe controls, and richer dashboard summary data.
+Remaining: volume visualization, dynamic chart footer labels, working timeframe metadata, and richer dashboard summary data.
 
 #### Markets
 
-Present: indices, top gainers, top losers, sector performance, and mock stock data.
+Present: provider-backed indices, top gainers, top losers, and live market status.
 
 Remaining: stale-data presentation, real-provider freshness behavior, and a defined most-active list if it remains in the milestone.
 
@@ -222,27 +223,27 @@ Remaining: responsive chart/table behavior and broader per-symbol detail records
 
 #### Watchlist
 
-Present: page layout, mock rows, filtering, and filtered empty feedback.
+Present: page layout, API-backed rows, filtering, and filtered empty feedback.
 
 Remaining: backend mutation error feedback, stock catalog search for adding arbitrary symbols, and production user ownership/authentication.
 
 #### Portfolio
 
-Present: portfolio summary, holdings, allocation, and mock presentation.
+Present: portfolio summary, holdings, allocation, and development-state presentation.
 
 Remaining: functional portfolio mutation actions, clear zero-holdings state, responsive table behavior, and database-backed user ownership.
 
 #### AI Insights
 
-Present: AI-oriented visual sections and mock analysis content.
+Present: live-data-derived rule-based signals and explicit non-AI explanation state.
 
-Remaining: production prediction/AI provider behavior, request freshness/retry handling, and stronger uncertainty presentation. The current page is fully bound to the mock Insights contract.
+Remaining: prediction evaluation, AI explanation provider behavior, request freshness/retry handling, and stronger uncertainty presentation.
 
 #### News
 
 Present: News page, cards, filtering, and an empty result message.
 
-Remaining: article-specific URLs from provider data and richer pagination. The current `Read` action opens mock publisher destinations, related-stock navigation works, and News requests data through the API client. News mapping and sentiment are mock backend behavior for now.
+Remaining: richer pagination, provider-native sentiment classification, and article detail handling. The current `Read` action opens article-specific URLs returned by the live news provider.
 
 #### Settings
 
@@ -289,7 +290,7 @@ Present: a dismissible route-aware tour covering Dashboard, Markets, Watchlist, 
 
 1. Finish remaining visual-only mock sections using ready API response data.
 2. Add request cancellation, retry refinement, and mutation error feedback.
-3. Replace mock market and news providers with real provider adapters.
+3. Add provider reliability controls, freshness metadata, and contract monitoring.
 4. Add database-backed user state, authentication, OAuth, and server-side logout.
 5. Add production prediction evaluation and AI explanation safeguards.
 6. Complete manual route and viewport review plus focused frontend/API tests.

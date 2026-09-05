@@ -13,8 +13,9 @@ export function Register() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    register<{ message: string }>(name, email, password)
+    register<{ message: string; token: string }>(name, email, password)
       .then((response) => {
+      localStorage.setItem("nexus_session_token", response.token);
         setMessage(response.message);
         navigate("/dashboard");
       })

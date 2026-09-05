@@ -13,7 +13,7 @@ import { NewsPanel } from "../../components/News/NewsPanel";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { LoadingState } from "../../components/ui/LoadingState";
-import { getNews } from "../../services/api";
+import { getNewsPage, type NewsPage } from "../../services/api";
 
 const categories = [
   "All",
@@ -29,24 +29,24 @@ export function News() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedSentiment, setSelectedSentiment] = useState("All");
-  const [newsItems, setNewsItems] = useState<Awaited<ReturnType<typeof getNews>>>([]);
+  const [newsPage, setNewsPage] = useState<NewsPage>({ items: [], page: 1, pageSize: 20, total: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
   const loadNews = () => {
     setIsLoading(true);
     setError("");
-    getNews({ query: search, category: selectedCategory, sentiment: selectedSentiment })
-      .then(setNewsItems)
+    getNewsPage({ query: search, category: selectedCategory, sentiment: selectedSentiment, page: newsPage.page })
+      .then(setNewsPage)
       .catch((requestError: Error) => setError(requestError.message))
       .finally(() => setIsLoading(false));
   };
 
   useEffect(() => {
     let mounted = true;
-    getNews()
-      .then((items) => {
-        if (mounted) setNewsItems(items);
+    getNewsPage({ query: search, category: selectedCategory, sentiment: selectedSentiment, page: newsPage.page })
+      .then((page) => {
+        if (mounted) setNewsPage(page);
       })
       .catch((requestError: Error) => {
         if (mounted) setError(requestError.message);
@@ -58,47 +58,31 @@ export function News() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [newsPage.page, search, selectedCategory, selectedSentiment]);
 
   const filteredNews = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return newsItems.filter((item) => {
-      const matchesSearch =
-        !query ||
-        item.title.toLowerCase().includes(query) ||
-        item.source.toLowerCase().includes(query) ||
-        item.stocks.some((stock) =>
-          stock.toLowerCase().includes(query),
-        );
+    return newsPage.items.filter((item) => !query || item.title.toLowerCase().includes(query) || item.source.toLowerCase().includes(query) || item.stocks.some((stock) => stock.toLowerCase().includes(query)));
+  }, [newsPage.items, search]);
 
-      const matchesCategory =
-        selectedCategory === "All" ||
-        item.category === selectedCategory;
-
-      const matchesSentiment =
-        selectedSentiment === "All" ||
-        item.sentiment === selectedSentiment;
-
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesSentiment
-      );
-    });
-  }, [newsItems, search, selectedCategory, selectedSentiment]);
-
-  const positiveCount = newsItems.filter(
+  const positiveCount = newsPage.items.filter(
     (item) => item.sentiment === "Positive",
   ).length;
 
-  const neutralCount = newsItems.filter(
+  const articleCount = newsPage.total;
+
+  const neutralCount = newsPage.items.filter(
     (item) => item.sentiment === "Neutral",
   ).length;
 
-  const negativeCount = newsItems.filter(
+  const negativeCount = newsPage.items.filter(
     (item) => item.sentiment === "Negative",
   ).length;
+  const sentimentScore = newsPage.items.length
+    ? Math.round(((positiveCount + neutralCount * 0.5) / newsPage.items.length) * 100)
+    : 0;
+  const sentimentLabel = sentimentScore >= 60 ? "Positive" : sentimentScore >= 40 ? "Neutral" : "Negative";
 
   if (isLoading) {
     return <LoadingState className="news-page" label="Loading market news" />;
@@ -136,7 +120,7 @@ export function News() {
 
           <div>
             <span>Articles today</span>
-            <strong>128</strong>
+            <strong>{articleCount}</strong>
           </div>
         </div>
 
@@ -230,7 +214,7 @@ export function News() {
             </div>
 
             <span className="news-result-count">
-              {filteredNews.length} stories
+              {newsPage.total} stories · page {newsPage.page}
             </span>
           </div>
 
@@ -243,6 +227,14 @@ export function News() {
               description="Try changing your search or filter selection."
             />
           )}
+
+          {newsPage.total > newsPage.pageSize ? (
+            <div className="news-pagination">
+              <button disabled={newsPage.page <= 1} onClick={() => setNewsPage((current) => ({ ...current, page: current.page - 1 }))}>Previous</button>
+              <span>Page {newsPage.page} of {Math.ceil(newsPage.total / newsPage.pageSize)}</span>
+              <button disabled={newsPage.page >= Math.ceil(newsPage.total / newsPage.pageSize)} onClick={() => setNewsPage((current) => ({ ...current, page: current.page + 1 }))}>Next</button>
+            </div>
+          ) : null}
         </div>
 
         <aside className="news-sidebar">
@@ -316,7 +308,7 @@ export function News() {
             </div>
 
             <div className="sentiment-score">
-              <strong>74</strong>
+              <strong>{sentimentScore}</strong>
               <span>/100</span>
             </div>
 
@@ -326,20 +318,18 @@ export function News() {
 
             <div className="sentiment-description">
               <span>Overall sentiment</span>
-              <strong>Positive</strong>
+              <strong>{sentimentLabel}</strong>
             </div>
 
             <p>
-              AI currently detects more positive than negative
-              market stories across the monitored sources.
+              Current sentiment is calculated from the articles returned by the news provider.
             </p>
           </div>
         </aside>
       </section>
 
       <div className="news-data-note">
-        News displayed here is mock data for the UI development phase.
-        Real news sources will be connected later.
+        News and article links are supplied by the server-side market news provider.
       </div>
     </div>
   );

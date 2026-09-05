@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     app_name: str = "AI Stock Prediction API"
     environment: str = "development"
     frontend_origin: str = "http://localhost:5173"
+    database_url: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

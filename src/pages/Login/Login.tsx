@@ -12,8 +12,9 @@ export function Login() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    login<{ message: string }>(email, password)
+    login<{ message: string; token: string }>(email, password)
       .then((response) => {
+      localStorage.setItem("nexus_session_token", response.token);
         setMessage(response.message);
         navigate("/dashboard");
       })
